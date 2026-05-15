@@ -1,0 +1,9 @@
+# Ignore all data files
+data/
+*.csv
+*.parquet
+
+# Ignore virtual environments and cache
+venv/
+__pycache__/
+.ipynb_checkpoints/

@@ -97,7 +97,7 @@ def main():
     # Export verification layer
     val_df['Predicted_Ceiling'] = val_preds
     val_export = val_df[['Outlet_ID', 'monthly_volume', 'Predicted_Ceiling']]
-    val_export.to_csv('../data/validation_results.csv', index=False)
+    val_export.to_csv('../data/gold/validation_results.csv', index=False)
     logger.info("Validation performance trace exported to '../data/validation_results.csv'.")
 
     # 5. January 2026 Future Inference Matrix Setup
@@ -136,7 +136,7 @@ def main():
     
     # 7. Deliverable Generation
     submission = jan_2026_df[['Outlet_ID', 'Maximum_Monthly_Liters']]
-    output_path = '../data/fih_predictions.csv'
+    output_path = '../data/gold/fih_predictions.csv'
     submission.to_csv(output_path, index=False)
     logger.info(f"Execution complete. Final submission binary saved to: {output_path}")
 

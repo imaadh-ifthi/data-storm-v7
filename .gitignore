@@ -1,7 +1,9 @@
 # Ignore all data files
-data/
-*.csv
 *.parquet
+
+#Ignore transaction history file
+data/bronze/transactions_history_final.csv
+data/bronze/transactions_history.csv
 
 # Ignore virtual environments and cache
 venv/

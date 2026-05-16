@@ -30,7 +30,7 @@ FEATURE_CSV = GOLD_DIR / "gold_outlet_spatial_features.csv"
 OUTLET_COORDS_CSV = "../data/bronze/outlet_coordinates.csv"
 
 # --- CONFIGURATION ---
-TEST_MODE = True  # Set to False for the full 4-province run
+TEST_MODE = False  # Set to False for the full 4-province run
 
 OVERPASS_URLS = [
     "https://overpass-api.de/api/interpreter",

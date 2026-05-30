@@ -10,7 +10,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # --- CONFIGURATION ---
-BRONZE_EXT_DIR = Path("../data/bronze/external_pois")
+BRONZE_EXT_DIR = Path("../../data/bronze/external_pois")
 BRONZE_EXT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Dynamic timestamp to prevent PermissionError

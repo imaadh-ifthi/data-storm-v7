@@ -3,6 +3,9 @@
 Data Storm 7.0 - Second Round Commencement.pdf
 Problem Statement - 2nd Round.pdf
 
+#ignore virtual_documents
+.virtual_documents/
+
 #Ignore transaction history file
 data/bronze/transactions_history_final.csv
 data/bronze/transactions_history.csv

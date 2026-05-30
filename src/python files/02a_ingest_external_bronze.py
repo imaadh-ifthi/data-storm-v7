@@ -33,6 +33,8 @@ CATEGORY_TAGS: Dict[str, List[str]] = {
     "markets":    ["amenity=marketplace"],
     "tourism":    ["tourism=hotel", "tourism=guest_house"],
     "offices":    ["office=government", "office=company", "building=office"],
+    "competitors": ["shop=supermarket", "shop=convenience", "shop=kiosk", "shop=grocery", "shop=beverages","shop=department_store"], 
+
 }
 
 ALL_BBOXES = {

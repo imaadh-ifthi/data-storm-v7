@@ -9,6 +9,9 @@ type OutletPageParams = {
   query?: string;
   limit?: number;
   offset?: number;
+  fundedOnly?: boolean;
+  sortKey?: "trade_spend_lkr" | "spend_per_1000_liters" | "maximum_monthly_liters";
+  sortDir?: "asc" | "desc";
 };
 
 export async function getOutletPage(params: OutletPageParams): Promise<OutletPageResponse> {
@@ -32,6 +35,18 @@ export async function getOutletPage(params: OutletPageParams): Promise<OutletPag
 
   if (params.offset) {
     searchParams.set("offset", params.offset.toString());
+  }
+
+  if (params.fundedOnly) {
+    searchParams.set("funded_only", "1");
+  }
+
+  if (params.sortKey) {
+    searchParams.set("sort_key", params.sortKey);
+  }
+
+  if (params.sortDir) {
+    searchParams.set("sort_dir", params.sortDir);
   }
 
   const queryString = searchParams.toString();

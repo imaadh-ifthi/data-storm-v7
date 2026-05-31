@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Dashboard · Outlet Intelligence" },
-      { name: "description", content: "Outlet potential predictions and trade spend allocation." },
+      { name: "description", content: "Outlet potential predictions and capacity tiers." },
     ],
   }),
   component: Dashboard,
@@ -51,7 +51,7 @@ function Dashboard() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const avgPotential = metrics?.avg_maximum_monthly_liters ?? 0;
   const highCount = metrics?.high_tier_outlets ?? 0;
-  const allocatedBudget = metrics?.budget_allocated_lkr ?? 0;
+  const pageRows = rows.length;
 
   if (isLoading) {
     return (
@@ -132,7 +132,7 @@ function Dashboard() {
           hint="per outlet"
         />
         <KpiCard label="High-Tier Outlets" value={highCount.toLocaleString()} accent />
-        <KpiCard label="Budget Allocated (LKR)" value={allocatedBudget.toLocaleString()} invert />
+        <KpiCard label="Rows This Page" value={pageRows.toLocaleString()} invert />
       </div>
 
       {/* Table */}
@@ -148,9 +148,7 @@ function Dashboard() {
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Size</th>
                 <th className="px-4 py-3 text-right font-medium">Max Monthly Liters</th>
-                <th className="px-4 py-3 text-right font-medium">Trade Spend (LKR)</th>
                 <th className="px-4 py-3 font-medium">Tier</th>
-                <th className="px-4 py-3 font-medium">Band</th>
               </tr>
             </thead>
             <tbody>
@@ -185,23 +183,14 @@ function Dashboard() {
                       >
                         {o.maximum_monthly_liters.toLocaleString()}
                       </td>
-                      <td
-                        className="px-4 py-3 text-right font-mono text-xs"
-                        style={{ color: "#141204" }}
-                      >
-                        {o.trade_spend_lkr > 0 ? o.trade_spend_lkr.toLocaleString() : "—"}
-                      </td>
                       <td className="px-4 py-3">
                         <TierBadge tier={o.capacity_tier} />
-                      </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: "#85756e" }}>
-                        {o.budget_band}
                       </td>
                     </tr>
                     {isOpen && (
                       <tr>
-                        <td colSpan={7} className="px-4 pb-4">
-                          <OutletDetail outlet={o} />
+                        <td colSpan={5} className="px-4 pb-4">
+                          <OutletDetail outlet={o} showFunding={false} />
                         </td>
                       </tr>
                     )}
@@ -211,7 +200,7 @@ function Dashboard() {
               {total === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={5}
                     className="px-4 py-12 text-center text-sm"
                     style={{ color: "#85756e" }}
                   >

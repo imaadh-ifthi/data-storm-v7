@@ -63,4 +63,7 @@ export interface OutletPageResponse {
   metrics: OutletPageMetrics;
   outlet_types: string[];
   outlet_sizes: string[];
+  summary?: OutletDatasetSummary;
+  type_breakdown?: OutletTypeBreakdown[];
+  size_breakdown?: OutletSizeBreakdown[];
 }

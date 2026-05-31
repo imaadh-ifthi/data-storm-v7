@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from "recharts";
 
-import { getOutletDataset } from "@/lib/api/outlet-data.functions";
+import { getOutletPage } from "@/lib/api/outlet-data.functions";
 import { TierBadge } from "@/components/TierBadge";
 
 export const Route = createFileRoute("/budget")({
@@ -28,24 +28,26 @@ export const Route = createFileRoute("/budget")({
 type SortKey = "trade_spend_lkr" | "spend_per_1000_liters";
 
 function Budget() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["outlet-dataset"],
-    queryFn: () => getOutletDataset(),
-  });
-
   const [sortKey, setSortKey] = useState<SortKey>("trade_spend_lkr");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(0);
+  const pageSize = 200;
 
-  const outlets = useMemo(() => data?.outlets ?? [], [data]);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["budget-page", sortKey, sortDir, page],
+    queryFn: () =>
+      getOutletPage({
+        fundedOnly: true,
+        limit: pageSize,
+        offset: page * pageSize,
+        sortKey,
+        sortDir,
+      }),
+  });
 
-  const sorted = useMemo(() => {
-    return [...outlets].sort((a, b) => {
-      const left = a[sortKey];
-      const right = b[sortKey];
-      const diff = left - right;
-      return sortDir === "asc" ? diff : -diff;
-    });
-  }, [outlets, sortKey, sortDir]);
+  useEffect(() => {
+    setPage(0);
+  }, [sortKey, sortDir]);
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -66,10 +68,11 @@ function Budget() {
   }, [data?.type_breakdown]);
 
   const COLORS = ["#1f487e", "#86bbbd", "#91c499"];
-  const totalBudget = data?.summary.total_budget_lkr ?? 0;
-  const fundedOutlets = data?.summary.funded_outlets ?? 0;
-  const totalOutlets = data?.summary.total_outlets ?? 0;
-  const pct = totalOutlets > 0 ? (fundedOutlets / totalOutlets) * 100 : 0;
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalBudget = data?.summary?.total_budget_lkr ?? 0;
+  const fundedOutlets = data?.summary?.total_outlets ?? 0;
 
   const efficiencyColor = (v: number) =>
     v <= 1000 ? "#91c499" : v <= 2500 ? "#86bbbd" : "#85756e";
@@ -78,7 +81,7 @@ function Budget() {
     return (
       <main className="fade-in mx-auto max-w-screen-2xl px-6 py-8">
         <div className="card-surface p-8 text-sm" style={{ color: "#85756e" }}>
-          Loading CSV-backed budget view…
+          Loading funded budget view…
         </div>
       </main>
     );
@@ -88,7 +91,7 @@ function Budget() {
     return (
       <main className="fade-in mx-auto max-w-screen-2xl px-6 py-8">
         <div className="card-surface p-8 text-sm" style={{ color: "#85756e" }}>
-          Failed to load the CSV-backed budget view.
+          Failed to load the funded budget view.
         </div>
       </main>
     );
@@ -104,25 +107,18 @@ function Budget() {
               className="text-[11px] uppercase tracking-wider"
               style={{ color: "rgba(134,187,189,0.7)" }}
             >
-              Gold budget allocation · CSV-backed
+              Funded outlets only
             </div>
           </div>
           <div className="font-mono text-2xl font-bold">
-            LKR {totalBudget.toLocaleString()}{" "}
+            LKR {totalBudget.toLocaleString()} {" "}
             <span style={{ color: "rgba(255,255,255,0.5)" }}>
-              / {totalOutlets.toLocaleString()} funded
+              / {fundedOutlets.toLocaleString()} funded outlets
             </span>
           </div>
         </div>
-        <div
-          className="mt-4 h-1.5 w-full overflow-hidden rounded-full"
-          style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-        >
-          <div className="h-full" style={{ width: `${pct}%`, backgroundColor: "#91c499" }} />
-        </div>
         <div className="mt-2 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
-          {fundedOutlets.toLocaleString()} funded outlets · {totalOutlets.toLocaleString()} total
-          outlets
+          Funding analysis across outlets with trade spend allocations.
         </div>
       </section>
 
@@ -132,7 +128,7 @@ function Budget() {
           Allocation by Outlet Type
         </h2>
         <p className="text-xs" style={{ color: "#85756e" }}>
-          Gold CSV allocation totals grouped by outlet type
+          Funded allocation totals grouped by outlet type
         </p>
         <div className="mt-4 h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -211,16 +207,17 @@ function Budget() {
                 </th>
                 <th
                   className="px-4 py-3 text-right font-medium cursor-pointer"
-                  onClick={() => toggleSort("roi_ratio")}
+                  onClick={() => toggleSort("spend_per_1000_liters")}
                 >
-                  Spend / 1kL {sortKey === "roi_ratio" && (sortDir === "desc" ? "↓" : "↑")}
+                  Spend / 1kL{" "}
+                  {sortKey === "spend_per_1000_liters" && (sortDir === "desc" ? "↓" : "↑")}
                 </th>
                 <th className="px-4 py-3 font-medium">Tier</th>
                 <th className="px-4 py-3 font-medium">Band</th>
               </tr>
             </thead>
             <tbody>
-              {sorted.map((o) => (
+              {rows.map((o) => (
                 <tr key={o.outlet_id} style={{ borderBottom: "0.5px solid rgba(20,18,4,0.08)" }}>
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: "#85756e" }}>
                     {o.outlet_id}
@@ -249,10 +246,45 @@ function Budget() {
                   </td>
                 </tr>
               ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-12 text-center text-sm"
+                    style={{ color: "#85756e" }}
+                  >
+                    No funded outlets match this view.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </section>
+
+      {total > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={() => setPage((current) => Math.max(0, current - 1))}
+            disabled={page === 0}
+            className="rounded-md border bg-white px-3 py-1.5 text-xs"
+            style={{ borderColor: "rgba(20,18,4,0.12)", color: "#141204" }}
+          >
+            Previous
+          </button>
+          <div className="text-xs" style={{ color: "#85756e" }}>
+            Page {page + 1} of {totalPages} · {total.toLocaleString()} funded outlets
+          </div>
+          <button
+            onClick={() => setPage((current) => current + 1)}
+            disabled={(page + 1) * pageSize >= total}
+            className="rounded-md border bg-white px-3 py-1.5 text-xs"
+            style={{ borderColor: "rgba(20,18,4,0.12)", color: "#141204" }}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </main>
   );
 }

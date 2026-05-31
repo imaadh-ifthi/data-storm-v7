@@ -1,0 +1,107 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-ink: var(--ink);
+  --color-warm: var(--warm);
+  --color-sage: var(--sage);
+  --color-navy: var(--navy);
+  --color-teal: var(--teal);
+  --color-canvas: var(--canvas);
+
+  --font-sans: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --ink: #141204;
+  --warm: #85756e;
+  --sage: #91c499;
+  --navy: #1f487e;
+  --teal: #86bbbd;
+  --canvas: #f7f4ef;
+
+  --radius: 6px;
+  --background: #f7f4ef;
+  --foreground: #141204;
+  --card: #ffffff;
+  --card-foreground: #141204;
+  --popover: #ffffff;
+  --popover-foreground: #141204;
+  --primary: #1f487e;
+  --primary-foreground: #ffffff;
+  --secondary: #86bbbd;
+  --secondary-foreground: #141204;
+  --muted: #ece8e0;
+  --muted-foreground: #85756e;
+  --accent: #86bbbd;
+  --accent-foreground: #141204;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+  --border: rgba(20, 18, 4, 0.12);
+  --input: rgba(20, 18, 4, 0.12);
+  --ring: #1f487e;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html, body {
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: "Syne", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Syne", ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  .font-mono, code, kbd, samp, pre {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  }
+}
+
+@layer utilities {
+  .card-surface {
+    background-color: #ffffff;
+    border: 0.5px solid rgba(20, 18, 4, 0.12);
+    box-shadow: 0 1px 3px rgba(20, 18, 4, 0.06);
+  }
+  .fade-in {
+    animation: fadeIn 300ms ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}

@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Search } from "lucide-react";
 
-import { getOutletDataset } from "@/lib/api/outlet-data.functions";
+import { getOutletPage } from "@/lib/api/outlet-data.functions";
 import { KpiCard } from "@/components/KpiCard";
 import { TierBadge } from "@/components/TierBadge";
 import { OutletDetail } from "@/components/OutletDetail";
@@ -19,43 +19,39 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["outlet-dataset"],
-    queryFn: () => getOutletDataset(),
-  });
-
   const [outletType, setOutletType] = useState("All");
   const [outletSize, setOutletSize] = useState("All");
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
-  const outlets = useMemo(() => data?.outlets ?? [], [data]);
+  const pageSize = 200;
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["outlet-page", outletType, outletSize, query, page],
+    queryFn: () =>
+      getOutletPage({
+        outletType,
+        outletSize,
+        query,
+        limit: pageSize,
+        offset: page * pageSize,
+      }),
+  });
+
+  useEffect(() => {
+    setPage(0);
+    setOpenId(null);
+  }, [outletType, outletSize, query]);
+
+  const rows = data?.rows ?? [];
   const outletTypes = data?.outlet_types ?? [];
   const outletSizes = data?.outlet_sizes ?? [];
-
-  const filtered = useMemo(() => {
-    return outlets.filter((o) => {
-      if (outletType !== "All" && o.outlet_type !== outletType) return false;
-      if (outletSize !== "All" && o.outlet_size !== outletSize) return false;
-      if (query) {
-        const q = query.toLowerCase();
-        if (
-          !o.outlet_id.toLowerCase().includes(q) &&
-          !o.outlet_type.toLowerCase().includes(q) &&
-          !o.outlet_size.toLowerCase().includes(q)
-        )
-          return false;
-      }
-      return true;
-    });
-  }, [outlets, outletType, outletSize, query]);
-
-  const avgPotential = filtered.length
-    ? Math.round(filtered.reduce((s, o) => s + o.maximum_monthly_liters, 0) / filtered.length)
-    : 0;
-  const highCount = filtered.filter((o) => o.capacity_tier === "High").length;
-  const fundedCount = filtered.filter((o) => o.trade_spend_lkr > 0).length;
-  const allocatedBudget = filtered.reduce((sum, o) => sum + o.trade_spend_lkr, 0);
+  const metrics = data?.metrics;
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const avgPotential = metrics?.avg_maximum_monthly_liters ?? 0;
+  const highCount = metrics?.high_tier_outlets ?? 0;
+  const allocatedBudget = metrics?.budget_allocated_lkr ?? 0;
 
   if (isLoading) {
     return (
@@ -129,7 +125,7 @@ function Dashboard() {
 
       {/* KPI Cards */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Total Outlets" value={filtered.length.toLocaleString()} />
+        <KpiCard label="Total Outlets" value={total.toLocaleString()} />
         <KpiCard
           label="Avg Max Monthly Liters"
           value={`${avgPotential.toLocaleString()} L`}
@@ -158,7 +154,7 @@ function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((o) => {
+              {rows.map((o) => {
                 const isOpen = openId === o.outlet_id;
                 return (
                   <Fragment key={o.outlet_id}>
@@ -212,7 +208,7 @@ function Dashboard() {
                   </Fragment>
                 );
               })}
-              {filtered.length === 0 && (
+              {total === 0 && (
                 <tr>
                   <td
                     colSpan={7}
@@ -227,6 +223,30 @@ function Dashboard() {
           </table>
         </div>
       </div>
+
+      {total > 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={() => setPage((current) => Math.max(0, current - 1))}
+            disabled={page === 0}
+            className="rounded-md border bg-white px-3 py-1.5 text-xs"
+            style={{ borderColor: "rgba(20,18,4,0.12)", color: "#141204" }}
+          >
+            Previous
+          </button>
+          <div className="text-xs" style={{ color: "#85756e" }}>
+            Page {page + 1} of {totalPages} · {total.toLocaleString()} outlets
+          </div>
+          <button
+            onClick={() => setPage((current) => current + 1)}
+            disabled={(page + 1) * pageSize >= total}
+            className="rounded-md border bg-white px-3 py-1.5 text-xs"
+            style={{ borderColor: "rgba(20,18,4,0.12)", color: "#141204" }}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </main>
   );
 }

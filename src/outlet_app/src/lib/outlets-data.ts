@@ -49,3 +49,18 @@ export interface OutletDataset {
   type_breakdown: OutletTypeBreakdown[];
   size_breakdown: OutletSizeBreakdown[];
 }
+
+export interface OutletPageMetrics {
+  total_outlets: number;
+  avg_maximum_monthly_liters: number;
+  high_tier_outlets: number;
+  budget_allocated_lkr: number;
+}
+
+export interface OutletPageResponse {
+  rows: Outlet[];
+  total: number;
+  metrics: OutletPageMetrics;
+  outlet_types: string[];
+  outlet_sizes: string[];
+}

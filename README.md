@@ -39,3 +39,31 @@ Note on paths:
 
 - The original notebooks were developed in Google Colab and referenced files under a mounted Drive path (`/content/drive/MyDrive/data_storm/...`).
 - These notebooks have been updated to use a repository-relative base path (e.g., `Path('..') / 'data'`) so they run locally without a Drive mount. If you need to run them in Colab, revert paths or mount Drive accordingly.
+
+Github repository - https://github.com/imaadh-ifthi/data-storm-v7
+
+## Frontend — Launching the app (development)
+
+Prerequisites:
+
+- Node 22 (check with `node --version` — expect a `v22.x` output)
+- Bun (https://bun.sh) (check with `bun --version`)
+
+Development (run from the project root):
+
+```bash
+# change into the frontend app directory
+cd src/outlet_app
+
+# install dependencies with Bun
+bun install
+
+# start the dev server
+bun run dev
+```
+
+Notes:
+
+- The frontend consumes CSV data placed under the `data/` folder (notably `data/gold/`). CSV reading is performed server-side by the app to avoid shipping large files to the browser.
+- If you encounter issues with Bun or Node versions, ensure your environment is using Node 22 and a recent Bun release.
+

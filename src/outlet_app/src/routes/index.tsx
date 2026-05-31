@@ -1,0 +1,232 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Fragment, useMemo, useState } from "react";
+import { Search } from "lucide-react";
+
+import { getOutletDataset } from "@/lib/api/outlet-data.functions";
+import { KpiCard } from "@/components/KpiCard";
+import { TierBadge } from "@/components/TierBadge";
+import { OutletDetail } from "@/components/OutletDetail";
+
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Dashboard · Outlet Intelligence" },
+      { name: "description", content: "Outlet potential predictions and trade spend allocation." },
+    ],
+  }),
+  component: Dashboard,
+});
+
+function Dashboard() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["outlet-dataset"],
+    queryFn: () => getOutletDataset(),
+  });
+
+  const [outletType, setOutletType] = useState("All");
+  const [outletSize, setOutletSize] = useState("All");
+  const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const outlets = useMemo(() => data?.outlets ?? [], [data]);
+  const outletTypes = data?.outlet_types ?? [];
+  const outletSizes = data?.outlet_sizes ?? [];
+
+  const filtered = useMemo(() => {
+    return outlets.filter((o) => {
+      if (outletType !== "All" && o.outlet_type !== outletType) return false;
+      if (outletSize !== "All" && o.outlet_size !== outletSize) return false;
+      if (query) {
+        const q = query.toLowerCase();
+        if (
+          !o.outlet_id.toLowerCase().includes(q) &&
+          !o.outlet_type.toLowerCase().includes(q) &&
+          !o.outlet_size.toLowerCase().includes(q)
+        )
+          return false;
+      }
+      return true;
+    });
+  }, [outlets, outletType, outletSize, query]);
+
+  const avgPotential = filtered.length
+    ? Math.round(filtered.reduce((s, o) => s + o.maximum_monthly_liters, 0) / filtered.length)
+    : 0;
+  const highCount = filtered.filter((o) => o.capacity_tier === "High").length;
+  const fundedCount = filtered.filter((o) => o.trade_spend_lkr > 0).length;
+  const allocatedBudget = filtered.reduce((sum, o) => sum + o.trade_spend_lkr, 0);
+
+  if (isLoading) {
+    return (
+      <main className="fade-in mx-auto max-w-screen-2xl px-6 py-8">
+        <div className="card-surface p-8 text-sm" style={{ color: "#85756e" }}>
+          Loading CSV-backed outlet dataset…
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="fade-in mx-auto max-w-screen-2xl px-6 py-8">
+        <div className="card-surface p-8 text-sm" style={{ color: "#85756e" }}>
+          Failed to load the CSV-backed outlet dataset.
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="fade-in mx-auto max-w-screen-2xl px-6 py-8">
+      {/* Filter bar */}
+      <div className="card-surface mb-6 flex flex-wrap items-center gap-4 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {(["All", ...outletTypes] as const).map((type) => {
+            const active = outletType === type;
+            return (
+              <button
+                key={type}
+                onClick={() => setOutletType(type)}
+                className="rounded-full px-3.5 py-1.5 text-xs transition-colors"
+                style={{
+                  backgroundColor: active ? "#1f487e" : "#ffffff",
+                  color: active ? "#ffffff" : "#85756e",
+                  border: active ? "0.5px solid #1f487e" : "0.5px solid rgba(20,18,4,0.12)",
+                }}
+              >
+                {type}
+              </button>
+            );
+          })}
+        </div>
+
+        <select
+          value={outletSize}
+          onChange={(e) => setOutletSize(e.target.value)}
+          className="rounded-md border bg-white px-3 py-1.5 text-xs font-mono"
+          style={{ borderColor: "rgba(20,18,4,0.12)", color: "#141204" }}
+        >
+          <option value="All">All Sizes</option>
+          {outletSizes.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+
+        <div className="ml-auto relative">
+          <Search className="absolute left-2.5 top-2 h-3.5 w-3.5" style={{ color: "#85756e" }} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by Outlet ID or type…"
+            className="w-72 rounded-md border bg-white py-1.5 pl-8 pr-3 text-xs outline-none"
+            style={{ borderColor: "rgba(20,18,4,0.12)" }}
+          />
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Total Outlets" value={filtered.length.toLocaleString()} />
+        <KpiCard
+          label="Avg Max Monthly Liters"
+          value={`${avgPotential.toLocaleString()} L`}
+          hint="per outlet"
+        />
+        <KpiCard label="High-Tier Outlets" value={highCount.toLocaleString()} accent />
+        <KpiCard label="Budget Allocated (LKR)" value={allocatedBudget.toLocaleString()} invert />
+      </div>
+
+      {/* Table */}
+      <div className="card-surface overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                className="text-left text-[11px] uppercase tracking-wider"
+                style={{ color: "#85756e", borderBottom: "0.5px solid rgba(20,18,4,0.12)" }}
+              >
+                <th className="px-4 py-3 font-medium">Outlet ID</th>
+                <th className="px-4 py-3 font-medium">Type</th>
+                <th className="px-4 py-3 font-medium">Size</th>
+                <th className="px-4 py-3 text-right font-medium">Max Monthly Liters</th>
+                <th className="px-4 py-3 text-right font-medium">Trade Spend (LKR)</th>
+                <th className="px-4 py-3 font-medium">Tier</th>
+                <th className="px-4 py-3 font-medium">Band</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((o) => {
+                const isOpen = openId === o.outlet_id;
+                return (
+                  <Fragment key={o.outlet_id}>
+                    <tr
+                      onClick={() => setOpenId(isOpen ? null : o.outlet_id)}
+                      className="cursor-pointer transition-colors"
+                      style={{
+                        backgroundColor: isOpen ? "rgba(31,72,126,0.06)" : "transparent",
+                        borderBottom: "0.5px solid rgba(20,18,4,0.08)",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isOpen) e.currentTarget.style.backgroundColor = "rgba(31,72,126,0.04)";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isOpen) e.currentTarget.style.backgroundColor = "transparent";
+                      }}
+                    >
+                      <td className="px-4 py-3 font-mono text-xs" style={{ color: "#85756e" }}>
+                        {o.outlet_id}
+                      </td>
+                      <td className="px-4 py-3">{o.outlet_type}</td>
+                      <td className="px-4 py-3 text-sm" style={{ color: "#85756e" }}>
+                        {o.outlet_size}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-right font-mono font-semibold"
+                        style={{ color: "#1f487e" }}
+                      >
+                        {o.maximum_monthly_liters.toLocaleString()}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-right font-mono text-xs"
+                        style={{ color: "#141204" }}
+                      >
+                        {o.trade_spend_lkr > 0 ? o.trade_spend_lkr.toLocaleString() : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <TierBadge tier={o.capacity_tier} />
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: "#85756e" }}>
+                        {o.budget_band}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr>
+                        <td colSpan={7} className="px-4 pb-4">
+                          <OutletDetail outlet={o} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+              {filtered.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-12 text-center text-sm"
+                    style={{ color: "#85756e" }}
+                  >
+                    No outlets match your filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  );
+}

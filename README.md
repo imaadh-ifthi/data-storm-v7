@@ -42,12 +42,21 @@ Note on paths:
 
 Github repository - https://github.com/imaadh-ifthi/data-storm-v7
 
-## Frontend — Launching the app (development)
+## Frontend — Launching the app 
 
 Prerequisites:
 
 - Node 22 (check with `node --version` — expect a `v22.x` output)
 - Bun (https://bun.sh) (check with `bun --version`)
+  
+Linux/macOS 
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+Windows 
+```bash
+> powershell -c "irm bun.sh/install.ps1 | iex"
+```
 
 Environment setup (run from the project root):
 
@@ -58,7 +67,7 @@ cp .env.example .env
 # edit .env and set LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL
 # (for Gemini OpenAI-compatible API, use:
 #  LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-#  LLM_MODEL=gemini-1.5-flash )
+#  LLM_MODEL=gemini-2.5-flash )
 ```
 
 Backend (run from the project root):

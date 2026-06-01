@@ -72,24 +72,19 @@ function XaiChat() {
       <section className="rounded-lg p-6" style={{ backgroundColor: "#141204", color: "#ffffff" }}>
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <div>
-            <div
-              className="text-[11px] uppercase tracking-wider"
-              style={{ color: "rgba(134,187,189,0.7)" }}
-            >
-              Dynamic Explainability
-            </div>
+            
             <h1 className="mt-2 text-2xl font-semibold" style={{ fontFamily: "Syne" }}>
               Outlet XAI Chat
             </h1>
           </div>
           <div
-            className="rounded-full border px-3 py-1 text-xs font-mono"
-            style={{ color: "rgba(134,187,189,0.7)", borderColor: "rgba(134,187,189,0.3)" }}
+            className="rounded-full border px-3 py-1 text-m font-mono"
+            style={{ color: "#FFFF", borderColor: "#FFFF" }}
           >
             Model-driven explanations
           </div>
         </div>
-        <p className="mt-3 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <p className="mt-3 text-s" style={{ color: "rgba(255,255,255,0.6)" }}>
           Provide an outlet ID and we will translate the model drivers into a business narrative.
         </p>
       </section>
@@ -131,9 +126,9 @@ function XaiChat() {
           >
             {mutation.isPending ? "Generating..." : "Generate explanation"}
           </button>
-          <div className="text-xs" style={{ color: "#85756e" }}>
+          {/* <div className="text-xs" style={{ color: "#85756e" }}>
             Tip: Ask about key drivers, constraints, or local conditions.
-          </div>
+          </div> */}
         </div>
 
         <div className="card-surface p-5">

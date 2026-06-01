@@ -39,7 +39,7 @@ export function KpiCard({
       </div>
       {hint && (
         <div
-          className="mt-1 text-xs"
+          className="mt-1 text-s"
           style={{ color: invert ? "rgba(255,255,255,0.7)" : "#85756e" }}
         >
           {hint}

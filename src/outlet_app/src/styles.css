@@ -37,14 +37,14 @@
 
   --font-sans: "Syne", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
-}
+  
 
 :root {
   --ink: #141204;
   --warm: #85756e;
   --sage: #91c499;
   --navy: #1f487e;
-  --teal: #86bbbd;
+  --teal: #ffff;
   --canvas: #f7f4ef;
 
   --radius: 6px;
@@ -56,11 +56,11 @@
   --popover-foreground: #141204;
   --primary: #1f487e;
   --primary-foreground: #ffffff;
-  --secondary: #86bbbd;
+  --secondary: #ffff;
   --secondary-foreground: #141204;
   --muted: #ece8e0;
   --muted-foreground: #85756e;
-  --accent: #86bbbd;
+  --accent: #ffff;
   --accent-foreground: #141204;
   --destructive: #b3261e;
   --destructive-foreground: #ffffff;

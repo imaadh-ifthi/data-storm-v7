@@ -58,31 +58,31 @@ export function OutletDetail({
           </div>
           <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
             <div>
-              <span className="text-xs" style={{ color: "#85756e" }}>
+              <span className="text-s" style={{ color: "#85756e" }}>
                 ID
               </span>
               <div className="font-mono">{outlet.outlet_id}</div>
             </div>
             <div>
-              <span className="text-xs" style={{ color: "#85756e" }}>
+              <span className="text-s" style={{ color: "#85756e" }}>
                 Type
               </span>
               <div>{outlet.outlet_type}</div>
             </div>
             <div>
-              <span className="text-xs" style={{ color: "#85756e" }}>
+              <span className="text-s" style={{ color: "#85756e" }}>
                 Size
               </span>
               <div>{outlet.outlet_size}</div>
             </div>
             <div>
-              <span className="text-xs" style={{ color: "#85756e" }}>
+              <span className="text-s" style={{ color: "#85756e" }}>
                 Coolers
               </span>
               <div className="font-mono">{outlet.cooler_count}</div>
             </div>
             <div>
-              <span className="text-xs" style={{ color: "#85756e" }}>
+              <span className="text-s" style={{ color: "#85756e" }}>
                 Capacity tier
               </span>
               <div>
@@ -90,10 +90,10 @@ export function OutletDetail({
               </div>
             </div>
             <div className="col-span-2">
-              <span className="text-xs" style={{ color: "#85756e" }}>
+              <span className="text-s" style={{ color: "#85756e" }}>
                 Coordinates
               </span>
-              <div className="font-mono text-xs">
+              <div className="font-mono text-s">
                 {outlet.latitude == null || outlet.longitude == null
                   ? "—"
                   : `${outlet.latitude.toFixed(4)}, ${outlet.longitude.toFixed(4)}`}
@@ -120,7 +120,7 @@ export function OutletDetail({
               />
             </div>
             <div
-              className="mt-1 flex justify-between text-xs font-mono"
+              className="mt-1 flex justify-between text-s font-mono"
               style={{ color: "#85756e" }}
             >
               <span>0L</span>
@@ -139,7 +139,7 @@ export function OutletDetail({
             </div>
             <div className="mt-3 space-y-3">
               <div>
-                <div className="mb-1 flex justify-between text-xs">
+                <div className="mb-1 flex justify-between text-s">
                   <span>Spend vs. LKR 10,000 ceiling</span>
                   <span className="font-mono" style={{ color: "#1f487e" }}>
                     {outlet.trade_spend_lkr.toLocaleString()} LKR
@@ -148,7 +148,7 @@ export function OutletDetail({
                 <Bar value={outlet.trade_spend_lkr} max={10000} />
               </div>
               <div>
-                <div className="mb-1 flex justify-between text-xs">
+                <div className="mb-1 flex justify-between text-s">
                   <span>Allocation share of total budget</span>
                   <span className="font-mono" style={{ color: "#1f487e" }}>
                     {outlet.allocation_share_pct.toFixed(2)}%
@@ -165,7 +165,7 @@ export function OutletDetail({
 
         {showFunding && (
           <div
-            className="inline-block rounded-md px-3 py-2 text-xs font-mono"
+            className="inline-block rounded-md px-3 py-2 text-s font-mono"
             style={{ backgroundColor: "rgba(20,18,4,0.04)", color: "#141204" }}
           >
             {outlet.budget_band} budget band
@@ -212,7 +212,7 @@ export function OutletDetail({
             ].map((s) => (
               <div
                 key={s.label}
-                className="rounded-md px-3 py-2 text-xs"
+                className="rounded-md px-3 py-2 text-s"
                 style={{ backgroundColor: s.bg, color: s.fg }}
               >
                 <span style={{ color: "#85756e" }}>{s.label}:</span>{" "}
@@ -262,7 +262,7 @@ export function OutletDetail({
             ].map((s) => (
               <div
                 key={s.label}
-                className="rounded-md px-3 py-2 text-xs"
+                className="rounded-md px-3 py-2 text-s"
                 style={{ backgroundColor: s.bg, color: s.fg }}
               >
                 <span style={{ color: "#85756e" }}>{s.label}:</span>{" "}

@@ -31,7 +31,7 @@ function Budget() {
   const [sortKey, setSortKey] = useState<SortKey>("trade_spend_lkr");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
-  const pageSize = 200;
+  const pageSize = 20;
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["budget-page", sortKey, sortDir, page],
@@ -104,8 +104,8 @@ function Budget() {
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <div>
             <div
-              className="text-[11px] uppercase tracking-wider"
-              style={{ color: "rgba(134,187,189,0.7)" }}
+              className="text-[15px] uppercase tracking-wider"
+              style={{ color: "#FFFF" }}
             >
               Funded outlets only
             </div>
@@ -117,7 +117,7 @@ function Budget() {
             </span>
           </div>
         </div>
-        <div className="mt-2 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <div className="mt-2 text-s" style={{ color: "rgba(255,255,255,0.6)" }}>
           Funding analysis across outlets with trade spend allocations.
         </div>
       </section>
@@ -127,7 +127,7 @@ function Budget() {
         <h2 className="text-sm font-semibold" style={{ fontFamily: "Syne" }}>
           Allocation by Outlet Type
         </h2>
-        <p className="text-xs" style={{ color: "#85756e" }}>
+        <p className="text-s" style={{ color: "#85756e" }}>
           Funded allocation totals grouped by outlet type
         </p>
         <div className="mt-4 h-64">
@@ -219,11 +219,11 @@ function Budget() {
             <tbody>
               {rows.map((o) => (
                 <tr key={o.outlet_id} style={{ borderBottom: "0.5px solid rgba(20,18,4,0.08)" }}>
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: "#85756e" }}>
+                  <td className="px-4 py-3 font-mono text-s" style={{ color: "#85756e" }}>
                     {o.outlet_id}
                   </td>
                   <td className="px-4 py-3">{o.outlet_type}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{o.outlet_size}</td>
+                  <td className="px-4 py-3 font-mono text-s">{o.outlet_size}</td>
                   <td className="px-4 py-3 text-right font-mono">
                     {o.maximum_monthly_liters.toLocaleString()}
                   </td>
@@ -241,7 +241,7 @@ function Budget() {
                   <td className="px-4 py-3">
                     <TierBadge tier={o.capacity_tier} />
                   </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: "#85756e" }}>
+                  <td className="px-4 py-3 text-s" style={{ color: "#85756e" }}>
                     {o.budget_band}
                   </td>
                 </tr>
@@ -267,18 +267,18 @@ function Budget() {
           <button
             onClick={() => setPage((current) => Math.max(0, current - 1))}
             disabled={page === 0}
-            className="rounded-md border bg-white px-3 py-1.5 text-xs"
+            className="rounded-md border bg-white px-3 py-1.5 text-s"
             style={{ borderColor: "rgba(20,18,4,0.12)", color: "#141204" }}
           >
             Previous
           </button>
-          <div className="text-xs" style={{ color: "#85756e" }}>
+          <div className="text-s" style={{ color: "#85756e" }}>
             Page {page + 1} of {totalPages} · {total.toLocaleString()} funded outlets
           </div>
           <button
             onClick={() => setPage((current) => current + 1)}
             disabled={(page + 1) * pageSize >= total}
-            className="rounded-md border bg-white px-3 py-1.5 text-xs"
+            className="rounded-md border bg-white px-3 py-1.5 text-s"
             style={{ borderColor: "rgba(20,18,4,0.12)", color: "#141204" }}
           >
             Next

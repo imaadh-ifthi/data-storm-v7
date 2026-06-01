@@ -133,12 +133,13 @@ function parseOffset(value: string | null) {
   return parsed;
 }
 
-type SortKey = "trade_spend_lkr" | "spend_per_1000_liters" | "maximum_monthly_liters";
+type SortKey = "trade_spend_lkr" | "spend_per_1000_liters" | "maximum_monthly_liters" | "capacity_tier";
 
 function parseSortKey(value: string | null): SortKey | null {
   if (value === "trade_spend_lkr") return "trade_spend_lkr";
   if (value === "spend_per_1000_liters") return "spend_per_1000_liters";
   if (value === "maximum_monthly_liters") return "maximum_monthly_liters";
+  if (value === "capacity_tier") return "capacity_tier";
   return null;
 }
 
@@ -224,18 +225,21 @@ function filterOutlets(
   filters: {
     outletType?: string | null;
     outletSize?: string | null;
+    outletTier?: string | null;
     query?: string | null;
     fundedOnly?: boolean;
   },
 ): Outlet[] {
   const outletType = filters.outletType && filters.outletType !== "All" ? filters.outletType : null;
   const outletSize = filters.outletSize && filters.outletSize !== "All" ? filters.outletSize : null;
+  const outletTier = filters.outletTier && filters.outletTier !== "All" ? filters.outletTier : null;
   const query = filters.query?.trim().toLowerCase() || "";
   const fundedOnly = filters.fundedOnly ?? false;
 
   return outlets.filter((outlet) => {
     if (outletType && outlet.outlet_type !== outletType) return false;
     if (outletSize && outlet.outlet_size !== outletSize) return false;
+    if (outletTier && outlet.capacity_tier !== outletTier) return false;
 
     if (fundedOnly && outlet.trade_spend_lkr <= 0) return false;
 
@@ -255,7 +259,17 @@ function filterOutlets(
 function sortOutlets(outlets: Outlet[], sortKey: SortKey | null, sortDir: "asc" | "desc") {
   if (!sortKey) return outlets;
   const multiplier = sortDir === "asc" ? 1 : -1;
+  const tierRank: Record<Outlet["capacity_tier"], number> = {
+    High: 3,
+    Medium: 2,
+    Low: 1,
+  };
+
   return [...outlets].sort((a, b) => {
+    if (sortKey === "capacity_tier") {
+      return (tierRank[a.capacity_tier] - tierRank[b.capacity_tier]) * multiplier;
+    }
+
     const left = a[sortKey];
     const right = b[sortKey];
     return (left - right) * multiplier;
@@ -374,10 +388,11 @@ const server = Bun.serve({
     if (url.pathname === "/api/outlets") {
       try {
         const dataset = await loadOutletDataset(getDb());
-        const limit = parseLimit(url.searchParams.get("limit")) ?? 200;
+        const limit = parseLimit(url.searchParams.get("limit")) ?? 20;
         const offset = parseOffset(url.searchParams.get("offset"));
         const outletType = url.searchParams.get("outlet_type");
         const outletSize = url.searchParams.get("outlet_size");
+        const outletTier = url.searchParams.get("outlet_tier");
         const query = url.searchParams.get("query");
         const fundedOnly = parseBoolean(url.searchParams.get("funded_only"));
         const sortKey = parseSortKey(url.searchParams.get("sort_key"));
@@ -386,6 +401,7 @@ const server = Bun.serve({
         const filtered = filterOutlets(dataset.outlets, {
           outletType,
           outletSize,
+          outletTier,
           query,
           fundedOnly,
         });
@@ -401,10 +417,21 @@ const server = Bun.serve({
         const summary = buildSummary(filtered);
         const typeBreakdown = buildTypeBreakdown(filtered);
         const sizeBreakdown = buildSizeBreakdown(filtered);
-        const outletTypes = Array.from(new Set(filtered.map((outlet) => outlet.outlet_type))).sort(
+        const globalBudgetAllocated = dataset.outlets.reduce(
+          (sum, outlet) => sum + outlet.trade_spend_lkr,
+          0,
+        );
+        const globalTotalLiters = dataset.outlets.reduce(
+          (sum, outlet) => sum + outlet.maximum_monthly_liters,
+          0,
+        );
+        const globalHighTierOutlets = dataset.outlets.filter(
+          (outlet) => outlet.capacity_tier === "High",
+        ).length;
+        const outletTypes = Array.from(new Set(dataset.outlets.map((outlet) => outlet.outlet_type))).sort(
           (a, b) => a.localeCompare(b),
         );
-        const outletSizes = Array.from(new Set(filtered.map((outlet) => outlet.outlet_size))).sort(
+        const outletSizes = Array.from(new Set(dataset.outlets.map((outlet) => outlet.outlet_size))).sort(
           (a, b) => a.localeCompare(b),
         );
 
@@ -412,10 +439,11 @@ const server = Bun.serve({
           rows,
           total,
           metrics: {
-            total_outlets: total,
-            avg_maximum_monthly_liters: total > 0 ? Math.round(totalLiters / total) : 0,
-            high_tier_outlets: highTierOutlets,
-            budget_allocated_lkr: budgetAllocated,
+            total_outlets: dataset.outlets.length,
+            avg_maximum_monthly_liters:
+              dataset.outlets.length > 0 ? Math.round(globalTotalLiters / dataset.outlets.length) : 0,
+            high_tier_outlets: globalHighTierOutlets,
+            budget_allocated_lkr: globalBudgetAllocated,
           },
           outlet_types: outletTypes,
           outlet_sizes: outletSizes,

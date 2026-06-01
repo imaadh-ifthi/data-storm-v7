@@ -19,6 +19,7 @@ const dbPath = resolve(dbDir, "outlet_data.sqlite");
 
 const datasets = [
   { name: "fih_budget_allocations", file: "fih_budget_allocations.csv" },
+  { name: "fih_explanations", file: "fih_explanations.csv" },
   { name: "fih_predictions", file: "fih_predictions.csv" },
 ];
 

@@ -49,7 +49,29 @@ Prerequisites:
 - Node 22 (check with `node --version` — expect a `v22.x` output)
 - Bun (https://bun.sh) (check with `bun --version`)
 
-Development (run from the project root):
+Environment setup (run from the project root):
+
+```bash
+# create your local env file
+cp .env.example .env
+
+# edit .env and set LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL
+# (for Gemini OpenAI-compatible API, use:
+#  LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+#  LLM_MODEL=gemini-1.5-flash )
+```
+
+Backend (run from the project root):
+
+```bash
+# seed the sqlite database
+bun src/outlet_app/backend/seed-db.ts
+
+# start the backend api server
+bun src/outlet_app/backend/server.ts
+```
+
+Frontend (run from the project root):
 
 ```bash
 # change into the frontend app directory

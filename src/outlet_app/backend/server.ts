@@ -17,6 +17,9 @@ const repoRoot = resolve(__dirname, "..", "..", "..");
 const dbPath =
   process.env.OUTLET_DB_PATH ?? resolve(repoRoot, "src/outlet_app/db/outlet_data.sqlite");
 const port = Number(process.env.PORT ?? 8787);
+const llmBaseUrl = process.env.LLM_BASE_URL ?? "";
+const llmApiKey = process.env.LLM_API_KEY ?? "";
+const llmModel = process.env.LLM_MODEL ?? "gpt-4o-mini";
 
 const corsHeaders = {
   "access-control-allow-origin": process.env.CORS_ORIGIN ?? "*",
@@ -42,6 +45,73 @@ function jsonResponse(data: unknown, status = 200) {
     status,
     headers: { "content-type": "application/json; charset=utf-8", ...corsHeaders },
   });
+}
+
+async function readJsonBody(request: Request) {
+  const text = await request.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function resolveChatCompletionsUrl(baseUrl: string) {
+  if (!baseUrl) return "";
+  const trimmed = baseUrl.replace(/\/+$/, "");
+  return trimmed.endsWith("/v1") ? `${trimmed}/chat/completions` : `${trimmed}/v1/chat/completions`;
+}
+
+async function narrateExplanation(
+  explanation: Record<string, unknown>,
+  question: string | null,
+) {
+  if (!llmBaseUrl || !llmApiKey) {
+    return { error: "LLM configuration missing. Set LLM_BASE_URL and LLM_API_KEY." };
+  }
+
+  const url = resolveChatCompletionsUrl(llmBaseUrl);
+  const prompt = [
+    "You are an XAI assistant for a retail outlet forecasting model.",
+    "Use ONLY the provided explanation data. Do not invent facts.",
+    "Explain in simple business terms: why the outlet got its score,", 
+    "which factors increased or decreased it, and how local conditions and constraints affected it.",
+    "Respond in 4-6 short bullet points."
+  ].join(" ");
+
+  const messages = [
+    { role: "system", content: prompt },
+    {
+      role: "user",
+      content: JSON.stringify({ question: question ?? "Explain this outlet score.", explanation }),
+    },
+  ];
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${llmApiKey}`,
+    },
+    body: JSON.stringify({ model: llmModel, messages, temperature: 0.2 }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    return { error: `LLM request failed: ${detail || response.status}` };
+  }
+
+  const payload = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+
+  const content = payload.choices?.[0]?.message?.content?.trim();
+  if (!content) {
+    return { error: "LLM response missing content." };
+  }
+
+  return { narrative: content };
 }
 
 function parseLimit(value: string | null) {
@@ -248,6 +318,54 @@ const server = Bun.serve({
       try {
         const dataset = await loadOutletDataset(getDb());
         return jsonResponse(dataset);
+      } catch (error) {
+        return jsonResponse({ error: (error as Error).message }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/outlet-explanations") {
+      try {
+        const outletId = url.searchParams.get("outlet_id");
+        if (!outletId) {
+          return jsonResponse({ error: "Missing outlet_id query parameter." }, 400);
+        }
+        const dataset = await loadOutletDataset(getDb());
+        const outlet = dataset.outlets.find((row) => row.outlet_id === outletId);
+        if (!outlet || !outlet.xai_explanation) {
+          return jsonResponse({ error: "Explanation not found for outlet." }, 404);
+        }
+        return jsonResponse({ outlet_id: outletId, explanation: outlet.xai_explanation });
+      } catch (error) {
+        return jsonResponse({ error: (error as Error).message }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/outlet-explanations/narrate") {
+      try {
+        if (request.method !== "POST") {
+          return jsonResponse({ error: "Method not allowed" }, 405);
+        }
+
+        const body = await readJsonBody(request);
+        const outletId = typeof body?.outlet_id === "string" ? body.outlet_id : null;
+        const question = typeof body?.question === "string" ? body.question : null;
+
+        if (!outletId) {
+          return jsonResponse({ error: "Missing outlet_id in request body." }, 400);
+        }
+
+        const dataset = await loadOutletDataset(getDb());
+        const outlet = dataset.outlets.find((row) => row.outlet_id === outletId);
+        if (!outlet || !outlet.xai_explanation) {
+          return jsonResponse({ error: "Explanation not found for outlet." }, 404);
+        }
+
+        const result = await narrateExplanation(outlet.xai_explanation as Record<string, unknown>, question);
+        if ("error" in result) {
+          return jsonResponse(result, 502);
+        }
+
+        return jsonResponse({ outlet_id: outletId, narrative: result.narrative });
       } catch (error) {
         return jsonResponse({ error: (error as Error).message }, 500);
       }

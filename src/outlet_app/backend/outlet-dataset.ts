@@ -6,6 +6,32 @@ import { fileURLToPath } from "node:url";
 export type Tier = "High" | "Medium" | "Low";
 export type BudgetBand = "Unfunded" | "Seed" | "Core" | "Priority";
 
+export type ExplanationDriver = {
+  feature: string;
+  value: string | number | null;
+  contribution: number;
+};
+
+export type ExplanationSignal = {
+  feature: string;
+  value: string | number | null;
+};
+
+export type OperationalConstraints = {
+  cooler_count: number | null;
+  historical_max_volume: number | null;
+};
+
+export type OutletExplanation = {
+  predicted_raw: number;
+  maximum_monthly_liters: number;
+  base_value: number;
+  top_positive_drivers: ExplanationDriver[];
+  top_negative_drivers: ExplanationDriver[];
+  local_environment_signals: ExplanationSignal[];
+  operational_constraints: OperationalConstraints;
+};
+
 export type Outlet = {
   outlet_id: string;
   outlet_type: string;
@@ -20,6 +46,7 @@ export type Outlet = {
   spend_per_1000_liters: number;
   allocation_share_pct: number;
   summary_note: string;
+  xai_explanation: OutletExplanation | null;
 };
 
 export type OutletTypeBreakdown = {
@@ -72,6 +99,17 @@ type CoordinateRow = {
 type PredictionRow = {
   Outlet_ID: string;
   Maximum_Monthly_Liters: string;
+};
+
+type ExplanationRow = {
+  Outlet_ID: string;
+  Predicted_Raw: string;
+  Maximum_Monthly_Liters: string;
+  Base_Value: string;
+  Top_Positive_Drivers: string;
+  Top_Negative_Drivers: string;
+  Local_Environment_Signals: string;
+  Operational_Constraints: string;
 };
 
 type BudgetRow = {
@@ -164,6 +202,15 @@ function parseNullableNumber(value: string | undefined) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function parseJson<T>(value: string | undefined, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 function median(values: number[]) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -220,16 +267,19 @@ export async function loadOutletDataset(db: Database): Promise<OutletDataset> {
       ]);
 
       const predictions = loadTableRows<PredictionRow>(db, "fih_predictions");
+      const explanations = loadTableRows<ExplanationRow>(db, "fih_explanations");
       const budgets = loadTableRows<BudgetRow>(db, "fih_budget_allocations");
 
       const masterById = new Map(masters.map((row) => [row.Outlet_ID, row]));
       const coordinateById = new Map(coordinates.map((row) => [row.Outlet_ID, row]));
       const predictionById = new Map(predictions.map((row) => [row.Outlet_ID, row]));
+      const explanationById = new Map(explanations.map((row) => [row.Outlet_ID, row]));
       const budgetById = new Map(budgets.map((row) => [row.Outlet_ID, row]));
 
       const allIds = new Set<string>([
         ...masterById.keys(),
         ...coordinateById.keys(),
+        ...explanationById.keys(),
         ...predictionById.keys(),
         ...budgetById.keys(),
       ]);
@@ -243,6 +293,7 @@ export async function loadOutletDataset(db: Database): Promise<OutletDataset> {
         const master = masterById.get(outletId);
         const coordinatesRow = coordinateById.get(outletId);
         const prediction = predictionById.get(outletId);
+        const explanation = explanationById.get(outletId);
         const budget = budgetById.get(outletId);
 
         const maximumMonthlyLiters = parseNumber(prediction?.Maximum_Monthly_Liters);
@@ -258,6 +309,30 @@ export async function loadOutletDataset(db: Database): Promise<OutletDataset> {
           tradeSpendLkr > 0 && maximumMonthlyLiters > 0
             ? +(tradeSpendLkr / (maximumMonthlyLiters / 1000)).toFixed(2)
             : 0;
+
+        const xaiExplanation = explanation
+          ? {
+              predicted_raw: parseNumber(explanation.Predicted_Raw),
+              maximum_monthly_liters: parseNumber(explanation.Maximum_Monthly_Liters),
+              base_value: parseNumber(explanation.Base_Value),
+              top_positive_drivers: parseJson<ExplanationDriver[]>(
+                explanation.Top_Positive_Drivers,
+                [],
+              ),
+              top_negative_drivers: parseJson<ExplanationDriver[]>(
+                explanation.Top_Negative_Drivers,
+                [],
+              ),
+              local_environment_signals: parseJson<ExplanationSignal[]>(
+                explanation.Local_Environment_Signals,
+                [],
+              ),
+              operational_constraints: parseJson<OperationalConstraints>(
+                explanation.Operational_Constraints,
+                { cooler_count: null, historical_max_volume: null },
+              ),
+            }
+          : null;
 
         return {
           outlet_id: outletId,
@@ -276,6 +351,7 @@ export async function loadOutletDataset(db: Database): Promise<OutletDataset> {
             tradeSpendLkr > 0
               ? `${formatCurrency(tradeSpendLkr)} is allocated to support roughly ${formatNumber(maximumMonthlyLiters)}L of monthly capacity.`
               : `No allocation appears in the gold budget file; capacity is still estimated at ${formatNumber(maximumMonthlyLiters)}L per month.`,
+          xai_explanation: xaiExplanation,
         } satisfies Outlet;
       });
 

@@ -2,6 +2,32 @@ export type Tier = "High" | "Medium" | "Low";
 
 export type BudgetBand = "Unfunded" | "Seed" | "Core" | "Priority";
 
+export interface ExplanationDriver {
+  feature: string;
+  value: string | number | null;
+  contribution: number;
+}
+
+export interface ExplanationSignal {
+  feature: string;
+  value: string | number | null;
+}
+
+export interface OperationalConstraints {
+  cooler_count: number | null;
+  historical_max_volume: number | null;
+}
+
+export interface OutletExplanation {
+  predicted_raw: number;
+  maximum_monthly_liters: number;
+  base_value: number;
+  top_positive_drivers: ExplanationDriver[];
+  top_negative_drivers: ExplanationDriver[];
+  local_environment_signals: ExplanationSignal[];
+  operational_constraints: OperationalConstraints;
+}
+
 export interface Outlet {
   outlet_id: string;
   outlet_type: string;
@@ -16,6 +42,7 @@ export interface Outlet {
   spend_per_1000_liters: number;
   allocation_share_pct: number;
   summary_note: string;
+  xai_explanation: OutletExplanation | null;
 }
 
 export interface OutletTypeBreakdown {

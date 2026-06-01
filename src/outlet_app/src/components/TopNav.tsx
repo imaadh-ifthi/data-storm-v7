@@ -19,6 +19,7 @@ export function TopNav() {
   const tabs = [
     { to: "/", label: "Dashboard" },
     { to: "/budget", label: "Budget Allocation" },
+    { to: "/xai", label: "XAI Chat" },
   ];
 
   return (

@@ -21,27 +21,34 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const [outletType, setOutletType] = useState("All");
   const [outletSize, setOutletSize] = useState("All");
-  const [query, setQuery] = useState("");
+  const [outletTier, setOutletTier] = useState("All");
+  const [queryTail, setQueryTail] = useState("");
+  const [sortKey, setSortKey] = useState<"maximum_monthly_liters">("maximum_monthly_liters");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [openId, setOpenId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
 
-  const pageSize = 200;
+  const pageSize = 20;
+  const query = `OUT_${queryTail}`;
   const { data, isLoading, error } = useQuery({
-    queryKey: ["outlet-page", outletType, outletSize, query, page],
+    queryKey: ["outlet-page", outletType, outletSize, outletTier, query, sortKey, sortDir, page],
     queryFn: () =>
       getOutletPage({
         outletType,
         outletSize,
+        outletTier,
         query,
         limit: pageSize,
         offset: page * pageSize,
+        sortKey,
+        sortDir,
       }),
   });
 
   useEffect(() => {
     setPage(0);
     setOpenId(null);
-  }, [outletType, outletSize, query]);
+  }, [outletType, outletSize, outletTier, query, sortKey, sortDir]);
 
   const rows = data?.rows ?? [];
   const outletTypes = data?.outlet_types ?? [];
@@ -51,7 +58,6 @@ function Dashboard() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const avgPotential = metrics?.avg_maximum_monthly_liters ?? 0;
   const highCount = metrics?.high_tier_outlets ?? 0;
-  const pageRows = rows.length;
 
   if (isLoading) {
     return (
@@ -111,11 +117,39 @@ function Dashboard() {
           ))}
         </select>
 
+        <select
+          value={outletTier}
+          onChange={(e) => setOutletTier(e.target.value)}
+          className="rounded-md border bg-white px-3 py-1.5 text-xs font-mono"
+          style={{ borderColor: "rgba(20,18,4,0.12)", color: "#141204" }}
+        >
+          <option value="All">All Tiers</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+
+        <button
+          onClick={() => setSortDir((current) => (current === "asc" ? "desc" : "asc"))}
+          className="rounded-md border bg-white px-3 py-1.5 text-xs font-mono"
+          style={{ borderColor: "rgba(20,18,4,0.12)", color: "#141204" }}
+        >
+          Max Liters {sortDir === "desc" ? "↓" : "↑"}
+        </button>
+
         <div className="ml-auto relative">
           <Search className="absolute left-2.5 top-2 h-3.5 w-3.5" style={{ color: "#85756e" }} />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (!next.toUpperCase().startsWith("OUT_")) {
+                setQueryTail(next.replace(/^OUT_/i, ""));
+                return;
+              }
+
+              setQueryTail(next.slice(4));
+            }}
             placeholder="Search by Outlet ID or type…"
             className="w-72 rounded-md border bg-white py-1.5 pl-8 pr-3 text-xs outline-none"
             style={{ borderColor: "rgba(20,18,4,0.12)" }}
@@ -124,7 +158,7 @@ function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard label="Total Outlets" value={total.toLocaleString()} />
         <KpiCard
           label="Avg Max Monthly Liters"
@@ -132,7 +166,6 @@ function Dashboard() {
           hint="per outlet"
         />
         <KpiCard label="High-Tier Outlets" value={highCount.toLocaleString()} accent />
-        <KpiCard label="Rows This Page" value={pageRows.toLocaleString()} invert />
       </div>
 
       {/* Table */}

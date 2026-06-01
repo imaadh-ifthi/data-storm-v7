@@ -5,7 +5,7 @@ function Hex() {
     <svg width="20" height="22" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
         d="M10 1 L18.66 6 V16 L10 21 L1.34 16 V6 Z"
-        stroke="#86bbbd"
+        stroke="#ffff"
         strokeWidth="1.4"
         fill="none"
       />
@@ -27,8 +27,8 @@ export function TopNav() {
       <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-2">
           <Hex />
-          <span className="text-sm tracking-tight" style={{ color: "#86bbbd", fontFamily: "Syne" }}>
-            Outlet Intelligence
+          <span className="text-lg tracking-tight" style={{ color: "#FFFF", fontFamily: "Syne" }}>
+            fih Intelligence
           </span>
         </Link>
 
@@ -41,7 +41,7 @@ export function TopNav() {
                 to={t.to}
                 className="relative py-4 text-sm"
                 style={{
-                  color: active ? "#86bbbd" : "#85756e",
+                  color: active ? "#ffff" : "#85756e",
                   fontFamily: "Syne",
                   borderBottom: active ? "2px solid #86bbbd" : "2px solid transparent",
                 }}
@@ -53,10 +53,10 @@ export function TopNav() {
         </nav>
 
         <div
-          className="rounded-full border px-3 py-1 text-xs font-mono"
-          style={{ color: "rgba(134,187,189,0.7)", borderColor: "rgba(134,187,189,0.3)" }}
+          className="rounded-full border px-3 py-1 text-s font-mono"
+        
         >
-          CSV-backed gold dataset
+         
         </div>
       </div>
     </header>

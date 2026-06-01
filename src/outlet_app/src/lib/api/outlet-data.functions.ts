@@ -6,11 +6,12 @@ const baseUrl = rawBaseUrl.replace(/\/+$/, "");
 type OutletPageParams = {
   outletType?: string;
   outletSize?: string;
+  outletTier?: string;
   query?: string;
   limit?: number;
   offset?: number;
   fundedOnly?: boolean;
-  sortKey?: "trade_spend_lkr" | "spend_per_1000_liters" | "maximum_monthly_liters";
+  sortKey?: "trade_spend_lkr" | "spend_per_1000_liters" | "maximum_monthly_liters" | "capacity_tier";
   sortDir?: "asc" | "desc";
 };
 
@@ -23,6 +24,10 @@ export async function getOutletPage(params: OutletPageParams): Promise<OutletPag
 
   if (params.outletSize && params.outletSize !== "All") {
     searchParams.set("outlet_size", params.outletSize);
+  }
+
+  if (params.outletTier && params.outletTier !== "All") {
+    searchParams.set("outlet_tier", params.outletTier);
   }
 
   if (params.query && params.query.trim()) {

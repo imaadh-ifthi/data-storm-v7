@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as XaiRouteImport } from './routes/xai'
 import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as IndexRouteImport } from './routes/index'
 
+const XaiRoute = XaiRouteImport.update({
+  id: '/xai',
+  path: '/xai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BudgetRoute = BudgetRouteImport.update({
   id: '/budget',
   path: '/budget',
@@ -26,31 +32,42 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/budget': typeof BudgetRoute
+  '/xai': typeof XaiRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/budget': typeof BudgetRoute
+  '/xai': typeof XaiRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/budget': typeof BudgetRoute
+  '/xai': typeof XaiRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/budget'
+  fullPaths: '/' | '/budget' | '/xai'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/budget'
-  id: '__root__' | '/' | '/budget'
+  to: '/' | '/budget' | '/xai'
+  id: '__root__' | '/' | '/budget' | '/xai'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BudgetRoute: typeof BudgetRoute
+  XaiRoute: typeof XaiRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/xai': {
+      id: '/xai'
+      path: '/xai'
+      fullPath: '/xai'
+      preLoaderRoute: typeof XaiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/budget': {
       id: '/budget'
       path: '/budget'
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BudgetRoute: BudgetRoute,
+  XaiRoute: XaiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

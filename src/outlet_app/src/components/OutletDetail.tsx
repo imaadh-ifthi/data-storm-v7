@@ -36,8 +36,13 @@ function bandStyles(band: Outlet["budget_band"]) {
   }
 }
 
-export function OutletDetail({ outlet }: { outlet: Outlet }) {
-  const spendGauge = Math.min(100, (outlet.trade_spend_lkr / 10000) * 100);
+export function OutletDetail({
+  outlet,
+  showFunding = true,
+}: {
+  outlet: Outlet;
+  showFunding?: boolean;
+}) {
   const band = bandStyles(outlet.budget_band);
 
   return (
@@ -127,90 +132,146 @@ export function OutletDetail({ outlet }: { outlet: Outlet }) {
           </div>
         </div>
 
-        <div>
-          <div className="text-[11px] uppercase tracking-wider" style={{ color: "#85756e" }}>
-            Trade spend intensity
-          </div>
-          <div className="mt-3 space-y-3">
-            <div>
-              <div className="mb-1 flex justify-between text-xs">
-                <span>Spend vs. LKR 10,000 ceiling</span>
-                <span className="font-mono" style={{ color: "#1f487e" }}>
-                  {outlet.trade_spend_lkr.toLocaleString()} LKR
-                </span>
-              </div>
-              <Bar value={outlet.trade_spend_lkr} max={10000} />
+        {showFunding && (
+          <div>
+            <div className="text-[11px] uppercase tracking-wider" style={{ color: "#85756e" }}>
+              Trade spend intensity
             </div>
-            <div>
-              <div className="mb-1 flex justify-between text-xs">
-                <span>Allocation share of total budget</span>
-                <span className="font-mono" style={{ color: "#1f487e" }}>
-                  {outlet.allocation_share_pct.toFixed(2)}%
-                </span>
+            <div className="mt-3 space-y-3">
+              <div>
+                <div className="mb-1 flex justify-between text-xs">
+                  <span>Spend vs. LKR 10,000 ceiling</span>
+                  <span className="font-mono" style={{ color: "#1f487e" }}>
+                    {outlet.trade_spend_lkr.toLocaleString()} LKR
+                  </span>
+                </div>
+                <Bar value={outlet.trade_spend_lkr} max={10000} />
               </div>
-              <Bar
-                value={outlet.allocation_share_pct}
-                max={Math.max(1, outlet.allocation_share_pct * 4)}
-              />
+              <div>
+                <div className="mb-1 flex justify-between text-xs">
+                  <span>Allocation share of total budget</span>
+                  <span className="font-mono" style={{ color: "#1f487e" }}>
+                    {outlet.allocation_share_pct.toFixed(2)}%
+                  </span>
+                </div>
+                <Bar
+                  value={outlet.allocation_share_pct}
+                  max={Math.max(1, outlet.allocation_share_pct * 4)}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div
-          className="inline-block rounded-md px-3 py-2 text-xs font-mono"
-          style={{ backgroundColor: "rgba(20,18,4,0.04)", color: "#141204" }}
-        >
-          {outlet.budget_band} budget band
-        </div>
+        {showFunding && (
+          <div
+            className="inline-block rounded-md px-3 py-2 text-xs font-mono"
+            style={{ backgroundColor: "rgba(20,18,4,0.04)", color: "#141204" }}
+          >
+            {outlet.budget_band} budget band
+          </div>
+        )}
       </div>
 
       {/* RIGHT */}
-      <div className="space-y-4">
-        <div
-          className="card-surface p-5"
-          style={{ borderLeft: "3px solid #91c499", boxShadow: "none" }}
-        >
+      {showFunding ? (
+        <div className="space-y-4">
           <div
-            className="text-[11px] uppercase tracking-wider"
-            style={{ color: "#85756e", fontFamily: "Syne" }}
+            className="card-surface p-5"
+            style={{ borderLeft: "3px solid #91c499", boxShadow: "none" }}
           >
-            CSV-backed summary
-          </div>
-          <p className="mt-3 text-sm leading-relaxed" style={{ color: "#141204" }}>
-            {outlet.summary_note}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {[
-            {
-              label: "Max liters",
-              value: `${fmt(outlet.maximum_monthly_liters)}L`,
-              bg: "rgba(134,187,189,0.18)",
-              fg: "#2a6c6e",
-            },
-            {
-              label: "Spend / 1kL",
-              value:
-                outlet.spend_per_1000_liters > 0
-                  ? `LKR ${outlet.spend_per_1000_liters.toLocaleString()}`
-                  : "—",
-              bg: "rgba(31,72,126,0.12)",
-              fg: "#1f487e",
-            },
-            { label: "Band", value: outlet.budget_band, bg: band.bg, fg: band.fg },
-          ].map((s) => (
             <div
-              key={s.label}
-              className="rounded-md px-3 py-2 text-xs"
-              style={{ backgroundColor: s.bg, color: s.fg }}
+              className="text-[11px] uppercase tracking-wider"
+              style={{ color: "#85756e", fontFamily: "Syne" }}
             >
-              <span style={{ color: "#85756e" }}>{s.label}:</span>{" "}
-              <span className="font-mono font-semibold">{s.value}</span>
+              CSV-backed summary
             </div>
-          ))}
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: "#141204" }}>
+              {outlet.summary_note}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {[
+              {
+                label: "Max liters",
+                value: `${fmt(outlet.maximum_monthly_liters)}L`,
+                bg: "rgba(134,187,189,0.18)",
+                fg: "#2a6c6e",
+              },
+              {
+                label: "Spend / 1kL",
+                value:
+                  outlet.spend_per_1000_liters > 0
+                    ? `LKR ${outlet.spend_per_1000_liters.toLocaleString()}`
+                    : "—",
+                bg: "rgba(31,72,126,0.12)",
+                fg: "#1f487e",
+              },
+              { label: "Band", value: outlet.budget_band, bg: band.bg, fg: band.fg },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="rounded-md px-3 py-2 text-xs"
+                style={{ backgroundColor: s.bg, color: s.fg }}
+              >
+                <span style={{ color: "#85756e" }}>{s.label}:</span>{" "}
+                <span className="font-mono font-semibold">{s.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-4">
+          <div
+            className="card-surface p-5"
+            style={{ borderLeft: "3px solid #1f487e", boxShadow: "none" }}
+          >
+            <div
+              className="text-[11px] uppercase tracking-wider"
+              style={{ color: "#85756e", fontFamily: "Syne" }}
+            >
+              Capacity snapshot
+            </div>
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: "#141204" }}>
+              This outlet is projected at {fmt(outlet.maximum_monthly_liters)} liters per month and
+              sits in the {outlet.capacity_tier.toLowerCase()} capacity tier.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {[
+              {
+                label: "Max liters",
+                value: `${fmt(outlet.maximum_monthly_liters)}L`,
+                bg: "rgba(134,187,189,0.18)",
+                fg: "#2a6c6e",
+              },
+              {
+                label: "Tier",
+                value: outlet.capacity_tier,
+                bg: "rgba(31,72,126,0.12)",
+                fg: "#1f487e",
+              },
+              {
+                label: "Coolers",
+                value: outlet.cooler_count.toLocaleString(),
+                bg: "rgba(145,196,153,0.18)",
+                fg: "#2a6e35",
+              },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="rounded-md px-3 py-2 text-xs"
+                style={{ backgroundColor: s.bg, color: s.fg }}
+              >
+                <span style={{ color: "#85756e" }}>{s.label}:</span>{" "}
+                <span className="font-mono font-semibold">{s.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

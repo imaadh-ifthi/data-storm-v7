@@ -9,6 +9,9 @@ type OutletPageParams = {
   query?: string;
   limit?: number;
   offset?: number;
+  fundedOnly?: boolean;
+  sortKey?: "trade_spend_lkr" | "spend_per_1000_liters" | "maximum_monthly_liters";
+  sortDir?: "asc" | "desc";
 };
 
 export async function getOutletPage(params: OutletPageParams): Promise<OutletPageResponse> {
@@ -34,6 +37,18 @@ export async function getOutletPage(params: OutletPageParams): Promise<OutletPag
     searchParams.set("offset", params.offset.toString());
   }
 
+  if (params.fundedOnly) {
+    searchParams.set("funded_only", "1");
+  }
+
+  if (params.sortKey) {
+    searchParams.set("sort_key", params.sortKey);
+  }
+
+  if (params.sortDir) {
+    searchParams.set("sort_dir", params.sortDir);
+  }
+
   const queryString = searchParams.toString();
   const url = queryString ? `${baseUrl}/api/outlets?${queryString}` : `${baseUrl}/api/outlets`;
 
@@ -45,4 +60,30 @@ export async function getOutletPage(params: OutletPageParams): Promise<OutletPag
   }
 
   return (await response.json()) as OutletPageResponse;
+}
+
+type OutletNarrationResponse = {
+  outlet_id: string;
+  narrative: string;
+};
+
+export async function narrateOutletExplanation(params: {
+  outletId: string;
+  question: string;
+}): Promise<OutletNarrationResponse> {
+  const response = await fetch(`${baseUrl}/api/outlet-explanations/narrate`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      outlet_id: params.outletId,
+      question: params.question,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as OutletNarrationResponse;
 }

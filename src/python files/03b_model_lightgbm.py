@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+import json
 import pandas as pd
 import numpy as np
 import lightgbm as lgb
 import logging
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s │ %(levelname)-8s │ %(message)s")
 logger = logging.getLogger(__name__)
@@ -20,9 +22,21 @@ def prep_holidays(holiday_path):
     df['Month'] = df['Date'].dt.month
     return df.groupby(['Year', 'Month']).size().reset_index(name='holiday_count')
 
+def _serialize_value(value):
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return None
+    if isinstance(value, (np.integer, int)):
+        return int(value)
+    if isinstance(value, (np.floating, float)):
+        return float(value)
+    return str(value)
+
 def main():
+    repo_root = Path(__file__).resolve().parents[2]
+    data_dir = repo_root / "data"
+
     logger.info("Loading Unified Feature Matrix...")
-    df = pd.read_csv('../data/gold/master_training_matrix.csv')
+    df = pd.read_csv(data_dir / "gold" / "master_training_matrix.csv")
     
     # Extract chronological boundaries before casting to categorical types
     last_year = df['Year'].max()
@@ -97,12 +111,12 @@ def main():
     # Export verification layer
     val_df['Predicted_Ceiling'] = val_preds
     val_export = val_df[['Outlet_ID', 'monthly_volume', 'Predicted_Ceiling']]
-    val_export.to_csv('../data/gold/validation_results.csv', index=False)
-    logger.info("Validation performance trace exported to '../data/validation_results.csv'.")
+    val_export.to_csv(data_dir / "gold" / "validation_results.csv", index=False)
+    logger.info("Validation performance trace exported to 'data/gold/validation_results.csv'.")
 
     # 5. January 2026 Future Inference Matrix Setup
     logger.info("Constructing January 2026 target matrix...")
-    raw_df = pd.read_csv('../data/gold/master_training_matrix.csv')
+    raw_df = pd.read_csv(data_dir / "gold" / "master_training_matrix.csv")
     static_cols = ['Outlet_ID'] + [c for c in features if c not in ['holiday_count', 'Month']]
     
     # Extract structural outlet settings from the most recent historical entry
@@ -111,7 +125,7 @@ def main():
     jan_2026_df['Month'] = 1
     
     # Incorporate target temporal indicators
-    holidays = prep_holidays('../data/bronze/holiday_list.csv')
+    holidays = prep_holidays(data_dir / "bronze" / "holiday_list.csv")
     jan_2026_df = pd.merge(jan_2026_df, holidays, on=['Year', 'Month'], how='left')
     jan_2026_df['holiday_count'] = jan_2026_df['holiday_count'].fillna(0)
     
@@ -133,10 +147,78 @@ def main():
         jan_2026_df['Predicted_Raw'], 
         jan_2026_df['Historical_Max_Volume'].fillna(0)
     )
+
+    # 6b. Minimal XAI artifact generation (local feature contributions)
+    logger.info("Generating local explanation artifacts...")
+    contrib_matrix = model.predict(X_inference, pred_contrib=True)
+    base_values = contrib_matrix[:, -1]
+    feature_contribs = contrib_matrix[:, :-1]
+    feature_names = list(features)
+
+    local_signal_cols = [c for c in feature_names if 'decayed_' in c or 'saturation' in c]
+    cooler_col = 'Cooler_Count' if 'Cooler_Count' in jan_2026_df.columns else None
+
+    explanation_rows = []
+    for idx, outlet_id in enumerate(jan_2026_df['Outlet_ID']):
+        contrib_row = feature_contribs[idx]
+        values_row = X_inference.iloc[idx]
+
+        pos_idx = np.argsort(-contrib_row)[:3]
+        neg_idx = np.argsort(contrib_row)[:3]
+
+        top_positive = [
+            {
+                "feature": feature_names[i],
+                "value": _serialize_value(values_row[feature_names[i]]),
+                "contribution": float(contrib_row[i]),
+            }
+            for i in pos_idx
+        ]
+        top_negative = [
+            {
+                "feature": feature_names[i],
+                "value": _serialize_value(values_row[feature_names[i]]),
+                "contribution": float(contrib_row[i]),
+            }
+            for i in neg_idx
+        ]
+
+        local_signals = [
+            {
+                "feature": col,
+                "value": _serialize_value(values_row[col]),
+            }
+            for col in local_signal_cols
+        ]
+
+        operational_constraints = {
+            "cooler_count": _serialize_value(jan_2026_df.at[idx, cooler_col])
+            if cooler_col
+            else None,
+            "historical_max_volume": _serialize_value(jan_2026_df.at[idx, 'Historical_Max_Volume']),
+        }
+
+        explanation_rows.append(
+            {
+                "Outlet_ID": outlet_id,
+                "Predicted_Raw": float(jan_2026_df.at[idx, 'Predicted_Raw']),
+                "Maximum_Monthly_Liters": float(jan_2026_df.at[idx, 'Maximum_Monthly_Liters']),
+                "Base_Value": float(base_values[idx]),
+                "Top_Positive_Drivers": json.dumps(top_positive, ensure_ascii=True),
+                "Top_Negative_Drivers": json.dumps(top_negative, ensure_ascii=True),
+                "Local_Environment_Signals": json.dumps(local_signals, ensure_ascii=True),
+                "Operational_Constraints": json.dumps(operational_constraints, ensure_ascii=True),
+            }
+        )
+
+    explanation_df = pd.DataFrame(explanation_rows)
+    explanation_path = data_dir / "gold" / "fih_explanations.csv"
+    explanation_df.to_csv(explanation_path, index=False)
+    logger.info(f"Explanation artifacts exported to: {explanation_path}")
     
     # 7. Deliverable Generation
     submission = jan_2026_df[['Outlet_ID', 'Maximum_Monthly_Liters']]
-    output_path = '../data/gold/fih_predictions.csv'
+    output_path = data_dir / "gold" / "fih_predictions.csv"
     submission.to_csv(output_path, index=False)
     logger.info(f"Execution complete. Final submission binary saved to: {output_path}")
 

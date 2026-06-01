@@ -14,3 +14,6 @@ data/bronze/transactions_history.csv
 venv/
 __pycache__/
 .ipynb_checkpoints/
+
+# Environment files
+.env

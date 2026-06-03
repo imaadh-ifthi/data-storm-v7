@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -35,14 +36,27 @@ function Budget() {
   const [activeTab, setActiveTab] = useState<BreakdownTab>("type");
   const [sortKey, setSortKey] = useState<SortKey>("trade_spend_lkr");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [queryTail, setQueryTail] = useState("");
+  const [searchInput, setSearchInput] = useState("OUT_");
   const [page, setPage] = useState(0);
   const pageSize = 20;
 
+  const query = `OUT_${queryTail}`;
+
+  const handleSearch = () => {
+    if (!searchInput.toUpperCase().startsWith("OUT_")) {
+      setQueryTail(searchInput.replace(/^OUT_/i, ""));
+    } else {
+      setQueryTail(searchInput.slice(4));
+    }
+  };
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["budget-page", sortKey, sortDir, page],
+    queryKey: ["budget-page", sortKey, sortDir, page, query],
     queryFn: () =>
       getOutletPage({
         fundedOnly: true,
+        query,
         limit: pageSize,
         offset: page * pageSize,
         sortKey,
@@ -52,7 +66,7 @@ function Budget() {
 
   useEffect(() => {
     setPage(0);
-  }, [sortKey, sortDir]);
+  }, [sortKey, sortDir, query]);
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -227,10 +241,29 @@ function Budget() {
 
       {/* Allocation table */}
       <section className="card-surface overflow-hidden">
-        <div className="border-b p-4" style={{ borderColor: "rgba(20,18,4,0.08)" }}>
+        <div className="border-b p-4 flex flex-wrap items-center justify-between gap-4" style={{ borderColor: "rgba(20,18,4,0.08)" }}>
           <h2 className="text-sm font-semibold" style={{ fontFamily: "Syne" }}>
             Allocation Detail
           </h2>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5" style={{ color: "#85756e" }} />
+              <input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                placeholder="Search by Outlet ID…"
+                className="w-72 rounded-md border bg-white py-1.5 pl-8 pr-3 text-xs outline-none"
+                style={{ borderColor: "rgba(20,18,4,0.12)" }}
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              className="rounded-md bg-[#1f487e] px-3 py-1.5 text-xs text-white transition-colors hover:bg-[#1a3d6a]"
+            >
+              Search
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

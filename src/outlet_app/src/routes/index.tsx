@@ -24,6 +24,7 @@ function Dashboard() {
   const [outletSize, setOutletSize] = useState("All");
   const [outletTier, setOutletTier] = useState("All");
   const [queryTail, setQueryTail] = useState("");
+  const [searchInput, setSearchInput] = useState("OUT_");
   const [sortKey, setSortKey] = useState<"maximum_monthly_liters">("maximum_monthly_liters");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -31,6 +32,15 @@ function Dashboard() {
 
   const pageSize = 20;
   const query = `OUT_${queryTail}`;
+
+  const handleSearch = () => {
+    if (!searchInput.toUpperCase().startsWith("OUT_")) {
+      setQueryTail(searchInput.replace(/^OUT_/i, ""));
+    } else {
+      setQueryTail(searchInput.slice(4));
+    }
+  };
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["outlet-page", outletType, outletSize, outletTier, query, sortKey, sortDir, page],
     queryFn: () =>
@@ -138,23 +148,24 @@ function Dashboard() {
           Max Liters {sortDir === "desc" ? "↓" : "↑"}
         </button>
 
-        <div className="ml-auto relative">
-          <Search className="absolute left-2.5 top-2 h-3.5 w-3.5" style={{ color: "#85756e" }} />
-          <input
-            value={query}
-            onChange={(e) => {
-              const next = e.target.value;
-              if (!next.toUpperCase().startsWith("OUT_")) {
-                setQueryTail(next.replace(/^OUT_/i, ""));
-                return;
-              }
-
-              setQueryTail(next.slice(4));
-            }}
-            placeholder="Search by Outlet ID or type…"
-            className="w-72 rounded-md border bg-white py-1.5 pl-8 pr-3 text-xs outline-none"
-            style={{ borderColor: "rgba(20,18,4,0.12)" }}
-          />
+        <div className="ml-auto flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2 h-3.5 w-3.5" style={{ color: "#85756e" }} />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Search by Outlet ID or type…"
+              className="w-72 rounded-md border bg-white py-1.5 pl-8 pr-3 text-xs outline-none"
+              style={{ borderColor: "rgba(20,18,4,0.12)" }}
+            />
+          </div>
+          <button
+            onClick={handleSearch}
+            className="rounded-md bg-[#1f487e] px-3 py-1.5 text-xs text-white transition-colors hover:bg-[#1a3d6a]"
+          >
+            Search
+          </button>
         </div>
       </div>
 

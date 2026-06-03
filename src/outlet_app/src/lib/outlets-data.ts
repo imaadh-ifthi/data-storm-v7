@@ -59,6 +59,20 @@ export interface OutletSizeBreakdown {
   trade_spend_lkr: number;
 }
 
+export interface OutletTierBreakdown {
+  capacity_tier: Tier;
+  outlets: number;
+  maximum_monthly_liters: number;
+  trade_spend_lkr: number;
+}
+
+export interface OutletBandBreakdown {
+  budget_band: BudgetBand;
+  outlets: number;
+  maximum_monthly_liters: number;
+  trade_spend_lkr: number;
+}
+
 export interface OutletDatasetSummary {
   total_outlets: number;
   funded_outlets: number;
@@ -75,6 +89,8 @@ export interface OutletDataset {
   outlet_sizes: string[];
   type_breakdown: OutletTypeBreakdown[];
   size_breakdown: OutletSizeBreakdown[];
+  tier_breakdown: OutletTierBreakdown[];
+  band_breakdown: OutletBandBreakdown[];
 }
 
 export interface OutletPageMetrics {
@@ -93,4 +109,6 @@ export interface OutletPageResponse {
   summary?: OutletDatasetSummary;
   type_breakdown?: OutletTypeBreakdown[];
   size_breakdown?: OutletSizeBreakdown[];
+  tier_breakdown?: OutletTierBreakdown[];
+  band_breakdown?: OutletBandBreakdown[];
 }

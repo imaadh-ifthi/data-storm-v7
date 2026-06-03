@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import { Search } from "lucide-react";
 
 import { getOutletPage } from "@/lib/api/outlet-data.functions";
+import { formatNumber } from "@/lib/formatters";
 import { KpiCard } from "@/components/KpiCard";
 import { TierBadge } from "@/components/TierBadge";
 import { OutletDetail } from "@/components/OutletDetail";
@@ -159,13 +160,13 @@ function Dashboard() {
 
       {/* KPI Cards */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <KpiCard label="Total Outlets" value={total.toLocaleString()} />
+        <KpiCard label="Total Outlets" value={formatNumber(total)} />
         <KpiCard
           label="Avg Max Monthly Liters"
-          value={`${avgPotential.toLocaleString()} L`}
+          value={`${formatNumber(avgPotential)} L`}
           hint="per outlet"
         />
-        <KpiCard label="High-Tier Outlets" value={highCount.toLocaleString()} accent />
+        <KpiCard label="High-Tier Outlets" value={formatNumber(highCount)} accent />
       </div>
 
       {/* Table */}
@@ -214,7 +215,7 @@ function Dashboard() {
                         className="px-4 py-3 text-right font-mono font-semibold"
                         style={{ color: "#1f487e" }}
                       >
-                        {o.maximum_monthly_liters.toLocaleString()}
+                        {formatNumber(o.maximum_monthly_liters)}
                       </td>
                       <td className="px-4 py-3">
                         <TierBadge tier={o.capacity_tier} />
@@ -257,7 +258,7 @@ function Dashboard() {
             Previous
           </button>
           <div className="text-xs" style={{ color: "#85756e" }}>
-            Page {page + 1} of {totalPages} · {total.toLocaleString()} outlets
+            Page {page + 1} of {totalPages} · {formatNumber(total)} outlets
           </div>
           <button
             onClick={() => setPage((current) => current + 1)}

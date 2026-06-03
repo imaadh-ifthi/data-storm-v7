@@ -63,6 +63,20 @@ export type OutletSizeBreakdown = {
   trade_spend_lkr: number;
 };
 
+export type OutletTierBreakdown = {
+  capacity_tier: Tier;
+  outlets: number;
+  maximum_monthly_liters: number;
+  trade_spend_lkr: number;
+};
+
+export type OutletBandBreakdown = {
+  budget_band: BudgetBand;
+  outlets: number;
+  maximum_monthly_liters: number;
+  trade_spend_lkr: number;
+};
+
 export type OutletDatasetSummary = {
   total_outlets: number;
   funded_outlets: number;
@@ -79,6 +93,8 @@ export type OutletDataset = {
   outlet_sizes: string[];
   type_breakdown: OutletTypeBreakdown[];
   size_breakdown: OutletSizeBreakdown[];
+  tier_breakdown: OutletTierBreakdown[];
+  band_breakdown: OutletBandBreakdown[];
 };
 
 type CsvRow = Record<string, string>;
@@ -334,6 +350,7 @@ export async function loadOutletDataset(db: Database): Promise<OutletDataset> {
             }
           : null;
 
+
         return {
           outlet_id: outletId,
           outlet_type: outletType,
@@ -381,6 +398,8 @@ export async function loadOutletDataset(db: Database): Promise<OutletDataset> {
 
       const typeMap = new Map<string, OutletTypeBreakdown>();
       const sizeMap = new Map<string, OutletSizeBreakdown>();
+      const tierMap = new Map<Tier, OutletTierBreakdown>();
+      const bandMap = new Map<BudgetBand, OutletBandBreakdown>();
 
       outlets.forEach((outlet) => {
         const typeRow = typeMap.get(outlet.outlet_type) ?? {
@@ -404,7 +423,32 @@ export async function loadOutletDataset(db: Database): Promise<OutletDataset> {
         sizeRow.maximum_monthly_liters += outlet.maximum_monthly_liters;
         sizeRow.trade_spend_lkr += outlet.trade_spend_lkr;
         sizeMap.set(outlet.outlet_size, sizeRow);
+
+        const tierRow = tierMap.get(outlet.capacity_tier) ?? {
+          capacity_tier: outlet.capacity_tier,
+          outlets: 0,
+          maximum_monthly_liters: 0,
+          trade_spend_lkr: 0,
+        };
+        tierRow.outlets += 1;
+        tierRow.maximum_monthly_liters += outlet.maximum_monthly_liters;
+        tierRow.trade_spend_lkr += outlet.trade_spend_lkr;
+        tierMap.set(outlet.capacity_tier, tierRow);
+
+        const bandRow = bandMap.get(outlet.budget_band) ?? {
+          budget_band: outlet.budget_band,
+          outlets: 0,
+          maximum_monthly_liters: 0,
+          trade_spend_lkr: 0,
+        };
+        bandRow.outlets += 1;
+        bandRow.maximum_monthly_liters += outlet.maximum_monthly_liters;
+        bandRow.trade_spend_lkr += outlet.trade_spend_lkr;
+        bandMap.set(outlet.budget_band, bandRow);
       });
+
+      const tierRank: Record<Tier, number> = { High: 3, Medium: 2, Low: 1 };
+      const bandRank: Record<BudgetBand, number> = { Priority: 4, Core: 3, Seed: 2, Unfunded: 1 };
 
       return {
         outlets,
@@ -427,6 +471,12 @@ export async function loadOutletDataset(db: Database): Promise<OutletDataset> {
         ),
         size_breakdown: Array.from(sizeMap.values()).sort((a, b) =>
           a.outlet_size.localeCompare(b.outlet_size),
+        ),
+        tier_breakdown: Array.from(tierMap.values()).sort((a, b) =>
+          tierRank[b.capacity_tier] - tierRank[a.capacity_tier],
+        ),
+        band_breakdown: Array.from(bandMap.values()).sort((a, b) =>
+          bandRank[b.budget_band] - bandRank[a.budget_band],
         ),
       };
     })();

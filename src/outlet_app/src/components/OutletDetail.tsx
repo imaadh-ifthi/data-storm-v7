@@ -1,9 +1,6 @@
 import type { Outlet } from "@/lib/outlets-data";
 import { TierBadge } from "@/components/TierBadge";
-
-function fmt(n: number) {
-  return n.toLocaleString();
-}
+import { formatNumber } from "@/lib/formatters";
 
 function Bar({ value, max = 100 }: { value: number; max?: number }) {
   const pct = Math.min(100, (value / max) * 100);
@@ -44,6 +41,7 @@ export function OutletDetail({
   showFunding?: boolean;
 }) {
   const band = bandStyles(outlet.budget_band);
+  const maxLimit = Math.max(2500, Math.ceil(outlet.maximum_monthly_liters / 1000) * 1000);
 
   return (
     <div
@@ -114,7 +112,7 @@ export function OutletDetail({
               <div
                 className="h-full"
                 style={{
-                  width: `${Math.min(100, (outlet.maximum_monthly_liters / 2500) * 100)}%`,
+                  width: `${Math.min(100, (outlet.maximum_monthly_liters / maxLimit) * 100)}%`,
                   backgroundColor: "#1f487e",
                 }}
               />
@@ -125,9 +123,9 @@ export function OutletDetail({
             >
               <span>0L</span>
               <span style={{ color: "#1f487e", fontWeight: 600 }}>
-                {fmt(outlet.maximum_monthly_liters)}L
+                {formatNumber(outlet.maximum_monthly_liters)}L
               </span>
-              <span>2,500L</span>
+              <span>{formatNumber(maxLimit)}L</span>
             </div>
           </div>
         </div>
@@ -142,7 +140,7 @@ export function OutletDetail({
                 <div className="mb-1 flex justify-between text-s">
                   <span>Spend vs. LKR 10,000 ceiling</span>
                   <span className="font-mono" style={{ color: "#1f487e" }}>
-                    {outlet.trade_spend_lkr.toLocaleString()} LKR
+                    {formatNumber(outlet.trade_spend_lkr)} LKR
                   </span>
                 </div>
                 <Bar value={outlet.trade_spend_lkr} max={10000} />
@@ -195,7 +193,7 @@ export function OutletDetail({
             {[
               {
                 label: "Max liters",
-                value: `${fmt(outlet.maximum_monthly_liters)}L`,
+                value: `${formatNumber(outlet.maximum_monthly_liters)}L`,
                 bg: "rgba(134,187,189,0.18)",
                 fg: "#2a6c6e",
               },
@@ -203,7 +201,7 @@ export function OutletDetail({
                 label: "Spend / 1kL",
                 value:
                   outlet.spend_per_1000_liters > 0
-                    ? `LKR ${outlet.spend_per_1000_liters.toLocaleString()}`
+                    ? `LKR ${formatNumber(outlet.spend_per_1000_liters)}`
                     : "—",
                 bg: "rgba(31,72,126,0.12)",
                 fg: "#1f487e",
@@ -234,7 +232,7 @@ export function OutletDetail({
               Capacity snapshot
             </div>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: "#141204" }}>
-              This outlet is projected at {fmt(outlet.maximum_monthly_liters)} liters per month and
+              This outlet is projected at {formatNumber(outlet.maximum_monthly_liters)} liters per month and
               sits in the {outlet.capacity_tier.toLowerCase()} capacity tier.
             </p>
           </div>
@@ -243,7 +241,7 @@ export function OutletDetail({
             {[
               {
                 label: "Max liters",
-                value: `${fmt(outlet.maximum_monthly_liters)}L`,
+                value: `${formatNumber(outlet.maximum_monthly_liters)}L`,
                 bg: "rgba(134,187,189,0.18)",
                 fg: "#2a6c6e",
               },
@@ -255,7 +253,7 @@ export function OutletDetail({
               },
               {
                 label: "Coolers",
-                value: outlet.cooler_count.toLocaleString(),
+                value: formatNumber(outlet.cooler_count),
                 bg: "rgba(145,196,153,0.18)",
                 fg: "#2a6e35",
               },

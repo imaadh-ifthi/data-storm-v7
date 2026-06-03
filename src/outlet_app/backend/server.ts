@@ -9,6 +9,10 @@ import {
   type OutletDatasetSummary,
   type OutletSizeBreakdown,
   type OutletTypeBreakdown,
+  type OutletTierBreakdown,
+  type OutletBandBreakdown,
+  type Tier,
+  type BudgetBand,
 } from "./outlet-dataset";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -220,6 +224,53 @@ function buildSizeBreakdown(outlets: Outlet[]): OutletSizeBreakdown[] {
   );
 }
 
+function buildTierBreakdown(outlets: Outlet[]): OutletTierBreakdown[] {
+  const tierMap = new Map<Tier, OutletTierBreakdown>();
+
+  outlets.forEach((outlet) => {
+    const row = tierMap.get(outlet.capacity_tier) ?? {
+      capacity_tier: outlet.capacity_tier,
+      outlets: 0,
+      maximum_monthly_liters: 0,
+      trade_spend_lkr: 0,
+    };
+
+    row.outlets += 1;
+    row.maximum_monthly_liters += outlet.maximum_monthly_liters;
+    row.trade_spend_lkr += outlet.trade_spend_lkr;
+    tierMap.set(outlet.capacity_tier, row);
+  });
+
+  const tierRank: Record<Tier, number> = { High: 3, Medium: 2, Low: 1 };
+  return Array.from(tierMap.values()).sort((a, b) =>
+    tierRank[b.capacity_tier] - tierRank[a.capacity_tier],
+  );
+}
+
+function buildBandBreakdown(outlets: Outlet[]): OutletBandBreakdown[] {
+  const bandMap = new Map<BudgetBand, OutletBandBreakdown>();
+
+  outlets.forEach((outlet) => {
+    const row = bandMap.get(outlet.budget_band) ?? {
+      budget_band: outlet.budget_band,
+      outlets: 0,
+      maximum_monthly_liters: 0,
+      trade_spend_lkr: 0,
+    };
+
+    row.outlets += 1;
+    row.maximum_monthly_liters += outlet.maximum_monthly_liters;
+    row.trade_spend_lkr += outlet.trade_spend_lkr;
+    bandMap.set(outlet.budget_band, row);
+  });
+
+  const bandRank: Record<BudgetBand, number> = { Priority: 4, Core: 3, Seed: 2, Unfunded: 1 };
+  return Array.from(bandMap.values()).sort((a, b) =>
+    bandRank[b.budget_band] - bandRank[a.budget_band],
+  );
+}
+
+
 function filterOutlets(
   outlets: Outlet[],
   filters: {
@@ -244,10 +295,20 @@ function filterOutlets(
     if (fundedOnly && outlet.trade_spend_lkr <= 0) return false;
 
     if (query) {
-      const matches =
+      let matches =
         outlet.outlet_id.toLowerCase().includes(query) ||
         outlet.outlet_type.toLowerCase().includes(query) ||
         outlet.outlet_size.toLowerCase().includes(query);
+
+      if (!matches && query.startsWith("out")) {
+        const queryNumMatch = query.match(/\d+/);
+        const outletNumMatch = outlet.outlet_id.match(/\d+/);
+        if (queryNumMatch && outletNumMatch) {
+          if (Number.parseInt(queryNumMatch[0], 10) === Number.parseInt(outletNumMatch[0], 10)) {
+            matches = true;
+          }
+        }
+      }
 
       if (!matches) return false;
     }
@@ -417,6 +478,8 @@ const server = Bun.serve({
         const summary = buildSummary(filtered);
         const typeBreakdown = buildTypeBreakdown(filtered);
         const sizeBreakdown = buildSizeBreakdown(filtered);
+        const tierBreakdown = buildTierBreakdown(filtered);
+        const bandBreakdown = buildBandBreakdown(filtered);
         const globalBudgetAllocated = dataset.outlets.reduce(
           (sum, outlet) => sum + outlet.trade_spend_lkr,
           0,
@@ -450,6 +513,8 @@ const server = Bun.serve({
           summary,
           type_breakdown: typeBreakdown,
           size_breakdown: sizeBreakdown,
+          tier_breakdown: tierBreakdown,
+          band_breakdown: bandBreakdown,
         });
       } catch (error) {
         return jsonResponse({ error: (error as Error).message }, 500);

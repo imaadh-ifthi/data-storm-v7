@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
-import { narrateOutletExplanation } from "@/lib/api/outlet-data.functions";
+import { narrateOutletExplanation, getOutletPage } from "@/lib/api/outlet-data.functions";
+import type { Outlet } from "@/lib/outlets-data";
+import { formatNumber } from "@/lib/formatters";
 
 export const Route = createFileRoute("/xai")({
   head: () => ({
@@ -17,6 +21,7 @@ export const Route = createFileRoute("/xai")({
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  outlet?: Outlet;
 };
 
 function XaiChat() {
@@ -26,15 +31,22 @@ function XaiChat() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      return narrateOutletExplanation({
-        outletId: outletId.trim(),
+      const page = await getOutletPage({ query: outletId.trim(), limit: 1 });
+      if (!page.rows || page.rows.length === 0) {
+        throw new Error("No matching outlet found.");
+      }
+      const matchedOutlet = page.rows[0];
+
+      const narration = await narrateOutletExplanation({
+        outletId: matchedOutlet.outlet_id,
         question: question.trim(),
       });
+      return { narrative: narration.narrative, outlet: matchedOutlet };
     },
     onSuccess: (data) => {
       setMessages((current) => [
         ...current,
-        { role: "assistant", content: data.narrative },
+        { role: "assistant", content: data.narrative, outlet: data.outlet },
       ]);
     },
     onError: (error: Error) => {
@@ -144,26 +156,121 @@ function XaiChat() {
                 {prompt}
               </div>
             )}
-            {messages.map((message, index) => (
-              <div
-                key={`${message.role}-${index}`}
-                className="rounded-md px-4 py-3 text-sm leading-relaxed"
-                style={{
-                  backgroundColor:
-                    message.role === "user" ? "rgba(31,72,126,0.08)" : "rgba(134,187,189,0.16)",
-                  color: "#141204",
-                  borderLeft:
-                    message.role === "user"
-                      ? "3px solid rgba(31,72,126,0.6)"
-                      : "3px solid rgba(134,187,189,0.7)",
-                }}
-              >
-                <div className="text-[11px] uppercase tracking-wider" style={{ color: "#85756e" }}>
-                  {message.role === "user" ? "You" : "XAI Assistant"}
+            {messages.map((message, index) => {
+              const showChart = message.role === "assistant" && message.outlet?.xai_explanation;
+              const chartData = showChart ? [
+                { name: 'Base Value', value: message.outlet!.xai_explanation!.base_value, fill: '#85756e' },
+                { name: 'Predicted', value: message.outlet!.xai_explanation!.predicted_raw, fill: '#91c499' },
+                { name: 'Max Capacity', value: message.outlet!.xai_explanation!.maximum_monthly_liters, fill: '#1f487e' },
+              ] : [];
+
+              const driversData = showChart ? [
+                ...message.outlet!.xai_explanation!.top_positive_drivers.map(d => ({ name: d.feature.replace(/_/g, ' '), contribution: d.contribution, fill: '#91c499' })),
+                ...message.outlet!.xai_explanation!.top_negative_drivers.map(d => ({ name: d.feature.replace(/_/g, ' '), contribution: d.contribution, fill: '#e07a5f' }))
+              ].sort((a, b) => b.contribution - a.contribution) : [];
+
+              return (
+                <div
+                  key={`${message.role}-${index}`}
+                  className="rounded-md px-4 py-3 text-sm leading-relaxed"
+                  style={{
+                    backgroundColor:
+                      message.role === "user" ? "rgba(31,72,126,0.08)" : "rgba(134,187,189,0.16)",
+                    color: "#141204",
+                    borderLeft:
+                      message.role === "user"
+                        ? "3px solid rgba(31,72,126,0.6)"
+                        : "3px solid rgba(134,187,189,0.7)",
+                  }}
+                >
+                  <div className="text-[11px] uppercase tracking-wider" style={{ color: "#85756e" }}>
+                    {message.role === "user" ? "You" : `XAI Assistant • ${message.outlet ? message.outlet.outlet_id : ''}`}
+                  </div>
+                  <div className="mt-2">
+                    {message.role === "assistant" ? (
+                      <ReactMarkdown
+                        components={{
+                          ul: ({ node, ...props }) => <ul className="list-disc pl-5 mt-2 mb-2 space-y-1" {...props} />,
+                          strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
+                          p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <div className="whitespace-pre-line">{message.content}</div>
+                    )}
+                  </div>
+                  {showChart && (
+                    <div className="mt-6 pt-4 border-t" style={{ borderColor: "rgba(134,187,189,0.3)" }}>
+                      <h4 className="text-[11px] uppercase tracking-wider font-semibold mb-4" style={{ color: "#85756e" }}>Explanation Visuals</h4>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <div className="bg-white/5 border border-white/10 rounded p-4">
+                           <h5 className="text-[10px] uppercase font-semibold mb-2 opacity-70">Volume Potential</h5>
+                           <div className="h-40 w-full">
+                             <ResponsiveContainer width="100%" height="100%">
+                               <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                                 <XAxis type="number" hide />
+                                 <YAxis dataKey="name" type="category" width={80} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#141204' }} />
+                                 <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ backgroundColor: '#fff', borderRadius: '6px', color: '#141204', fontSize: '12px' }} formatter={(value: number) => formatNumber(value)} />
+                                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                                   {chartData.map((entry, idx) => (
+                                     <Cell key={`cell-${idx}`} fill={entry.fill} />
+                                   ))}
+                                 </Bar>
+                               </BarChart>
+                             </ResponsiveContainer>
+                           </div>
+                        </div>
+
+                        {driversData.length > 0 && (
+                          <div className="bg-white/5 border border-white/10 rounded p-4">
+                             <h5 className="text-[10px] uppercase font-semibold mb-2 opacity-70">Key Score Drivers</h5>
+                             <div className="h-40 w-full">
+                               <ResponsiveContainer width="100%" height="100%">
+                                 <BarChart data={driversData} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                                   <XAxis type="number" hide />
+                                   <YAxis dataKey="name" type="category" width={100} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#141204' }} />
+                                   <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ backgroundColor: '#fff', borderRadius: '6px', color: '#141204', fontSize: '11px' }} formatter={(value: number) => formatNumber(value)} />
+                                   <Bar dataKey="contribution" radius={[2, 2, 2, 2]}>
+                                     {driversData.map((entry, idx) => (
+                                       <Cell key={`cell-${idx}`} fill={entry.fill} />
+                                     ))}
+                                   </Bar>
+                                 </BarChart>
+                               </ResponsiveContainer>
+                             </div>
+                          </div>
+                        )}
+                        
+                        <div className="lg:col-span-2 bg-white/5 border border-white/10 rounded p-4">
+                            <h5 className="text-[10px] uppercase font-semibold mb-3 opacity-70">Local Signals & Constraints</h5>
+                            <div className="flex flex-wrap gap-2">
+                               {message.outlet!.xai_explanation!.local_environment_signals.map(s => (
+                                  <div key={s.feature} className="px-2 py-1 rounded-sm text-[11px] font-medium" style={{ backgroundColor: 'rgba(31,72,126,0.1)', color: '#1f487e', border: '1px solid rgba(31,72,126,0.2)' }}>
+                                    {s.feature.replace(/_/g, ' ')}: {s.value}
+                                  </div>
+                               ))}
+                               {message.outlet!.xai_explanation!.operational_constraints.cooler_count != null && (
+                                  <div className="px-2 py-1 rounded-sm text-[11px] font-medium" style={{ backgroundColor: 'rgba(133,117,110,0.1)', color: '#85756e', border: '1px solid rgba(133,117,110,0.2)' }}>
+                                    Coolers: {message.outlet!.xai_explanation!.operational_constraints.cooler_count}
+                                  </div>
+                               )}
+                               {message.outlet!.xai_explanation!.operational_constraints.historical_max_volume != null && (
+                                  <div className="px-2 py-1 rounded-sm text-[11px] font-medium" style={{ backgroundColor: 'rgba(133,117,110,0.1)', color: '#85756e', border: '1px solid rgba(133,117,110,0.2)' }}>
+                                    Hist. Max: {formatNumber(message.outlet!.xai_explanation!.operational_constraints.historical_max_volume)}L
+                                  </div>
+                               )}
+                            </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="mt-2 whitespace-pre-line">{message.content}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

@@ -12,7 +12,10 @@ import {
   Tooltip,
 } from "recharts";
 
+import * as Tabs from "@radix-ui/react-tabs";
+
 import { getOutletPage } from "@/lib/api/outlet-data.functions";
+import { formatNumber } from "@/lib/formatters";
 import { TierBadge } from "@/components/TierBadge";
 
 export const Route = createFileRoute("/budget")({
@@ -26,8 +29,10 @@ export const Route = createFileRoute("/budget")({
 });
 
 type SortKey = "trade_spend_lkr" | "spend_per_1000_liters";
+type BreakdownTab = "type" | "size" | "tier" | "band";
 
 function Budget() {
+  const [activeTab, setActiveTab] = useState<BreakdownTab>("type");
   const [sortKey, setSortKey] = useState<SortKey>("trade_spend_lkr");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
@@ -57,15 +62,36 @@ function Budget() {
     }
   };
 
-  const distAgg = useMemo(() => {
-    return (data?.type_breakdown ?? [])
-      .map((row) => ({
-        distributor: row.outlet_type,
-        spend: row.trade_spend_lkr,
-        outlets: row.outlets,
-      }))
-      .sort((a, b) => a.distributor.localeCompare(b.distributor));
-  }, [data?.type_breakdown]);
+  const chartData = useMemo(() => {
+    if (!data) return [];
+    
+    switch (activeTab) {
+      case "type":
+        return (data.type_breakdown ?? []).map((row) => ({
+          label: row.outlet_type,
+          spend: row.trade_spend_lkr,
+          outlets: row.outlets,
+        })).sort((a, b) => a.label.localeCompare(b.label));
+      case "size":
+        return (data.size_breakdown ?? []).map((row) => ({
+          label: row.outlet_size,
+          spend: row.trade_spend_lkr,
+          outlets: row.outlets,
+        })).sort((a, b) => a.label.localeCompare(b.label));
+      case "tier":
+        return (data.tier_breakdown ?? []).map((row) => ({
+          label: row.capacity_tier,
+          spend: row.trade_spend_lkr,
+          outlets: row.outlets,
+        }));
+      case "band":
+        return (data.band_breakdown ?? []).map((row) => ({
+          label: row.budget_band,
+          spend: row.trade_spend_lkr,
+          outlets: row.outlets,
+        }));
+    }
+  }, [data?.type_breakdown, data?.size_breakdown, data?.tier_breakdown, data?.band_breakdown, activeTab]);
 
   const COLORS = ["#1f487e", "#86bbbd", "#91c499"];
   const rows = data?.rows ?? [];
@@ -111,9 +137,9 @@ function Budget() {
             </div>
           </div>
           <div className="font-mono text-2xl font-bold">
-            LKR {totalBudget.toLocaleString()} {" "}
+            LKR {formatNumber(totalBudget)} {" "}
             <span style={{ color: "rgba(255,255,255,0.5)" }}>
-              / {fundedOutlets.toLocaleString()} funded outlets
+              / {formatNumber(fundedOutlets)} funded outlets
             </span>
           </div>
         </div>
@@ -124,60 +150,79 @@ function Budget() {
 
       {/* Distributor chart */}
       <section className="card-surface p-6">
-        <h2 className="text-sm font-semibold" style={{ fontFamily: "Syne" }}>
-          Allocation by Outlet Type
-        </h2>
-        <p className="text-s" style={{ color: "#85756e" }}>
-          Funded allocation totals grouped by outlet type
-        </p>
-        <div className="mt-4 h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={distAgg}
-              layout="vertical"
-              margin={{ top: 8, right: 80, bottom: 8, left: 16 }}
-            >
-              <XAxis
-                type="number"
-                tick={{ fontSize: 11, fill: "#85756e", fontFamily: "IBM Plex Mono" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                dataKey="distributor"
-                type="category"
+        <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as BreakdownTab)}>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-sm font-semibold" style={{ fontFamily: "Syne" }}>
+                Allocation by {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+              </h2>
+              <p className="text-s" style={{ color: "#85756e" }}>
+                Funded allocation totals grouped by outlet {activeTab}
+              </p>
+            </div>
+            <Tabs.List className="flex rounded-md border" style={{ borderColor: "rgba(20,18,4,0.12)", backgroundColor: "#f9f9f9" }}>
+              {(["type", "size", "tier", "band"] as const).map((tab) => (
+                <Tabs.Trigger
+                  key={tab}
+                  value={tab}
+                  className="px-3 py-1.5 text-xs transition-colors data-[state=active]:bg-white data-[state=active]:font-medium data-[state=active]:shadow-sm"
+                  style={{ color: activeTab === tab ? "#1f487e" : "#85756e" }}
+                >
+                  By {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </Tabs.Trigger>
+              ))}
+            </Tabs.List>
+          </div>
+        
+          <div className="mt-4 h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                layout="vertical"
+                margin={{ top: 8, right: 80, bottom: 8, left: 16 }}
+              >
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 11, fill: "#85756e", fontFamily: "IBM Plex Mono" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  dataKey="label"
+                  type="category"
                 tick={{ fontSize: 11, fill: "#141204", fontFamily: "IBM Plex Mono" }}
                 axisLine={false}
                 tickLine={false}
                 width={100}
               />
-              <Tooltip
-                cursor={{ fill: "rgba(31,72,126,0.04)" }}
-                contentStyle={{
-                  background: "#fff",
-                  border: "0.5px solid rgba(20,18,4,0.12)",
-                  fontSize: 12,
-                  fontFamily: "IBM Plex Mono",
-                }}
-                formatter={(v: number, _n, p) => [
-                  `LKR ${v.toLocaleString()} · ${(p.payload as { outlets: number }).outlets} outlets`,
-                  "Spend",
-                ]}
-              />
-              <Bar dataKey="spend" radius={[0, 4, 4, 0]}>
-                {distAgg.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-                <LabelList
-                  dataKey="spend"
-                  position="right"
-                  formatter={(v: number) => `LKR ${v.toLocaleString()}`}
-                  style={{ fontSize: 11, fill: "#141204", fontFamily: "IBM Plex Mono" }}
+                <Tooltip
+                  cursor={{ fill: "rgba(31,72,126,0.04)" }}
+                  contentStyle={{
+                    background: "#fff",
+                    border: "0.5px solid rgba(20,18,4,0.12)",
+                    fontSize: 12,
+                    fontFamily: "IBM Plex Mono",
+                  }}
+                  formatter={(v: number, _n, p) => [
+                    `LKR ${formatNumber(v)} · ${formatNumber((p.payload as { outlets: number }).outlets)} outlets`,
+                    "Spend",
+                  ]}
                 />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+                <Bar dataKey="spend" radius={[0, 4, 4, 0]}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                  <LabelList
+                    dataKey="spend"
+                    position="right"
+                    formatter={(v: number) => `LKR ${formatNumber(v)}`}
+                    style={{ fontSize: 11, fill: "#141204", fontFamily: "IBM Plex Mono" }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Tabs.Root>
       </section>
 
       {/* Allocation table */}
@@ -225,17 +270,17 @@ function Budget() {
                   <td className="px-4 py-3">{o.outlet_type}</td>
                   <td className="px-4 py-3 font-mono text-s">{o.outlet_size}</td>
                   <td className="px-4 py-3 text-right font-mono">
-                    {o.maximum_monthly_liters.toLocaleString()}
+                    {formatNumber(o.maximum_monthly_liters)}
                   </td>
                   <td className="px-4 py-3 text-right font-mono">
-                    {o.trade_spend_lkr.toLocaleString()}
+                    {formatNumber(o.trade_spend_lkr)}
                   </td>
                   <td
                     className="px-4 py-3 text-right font-mono"
                     style={{ color: efficiencyColor(o.spend_per_1000_liters) }}
                   >
                     {o.spend_per_1000_liters > 0
-                      ? `LKR ${o.spend_per_1000_liters.toLocaleString()}`
+                      ? `LKR ${formatNumber(o.spend_per_1000_liters)}`
                       : "—"}
                   </td>
                   <td className="px-4 py-3">
@@ -273,7 +318,7 @@ function Budget() {
             Previous
           </button>
           <div className="text-s" style={{ color: "#85756e" }}>
-            Page {page + 1} of {totalPages} · {total.toLocaleString()} funded outlets
+            Page {page + 1} of {totalPages} · {formatNumber(total)} funded outlets
           </div>
           <button
             onClick={() => setPage((current) => current + 1)}
